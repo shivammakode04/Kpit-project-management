@@ -11,7 +11,14 @@ _scheduler = None
 
 
 def start_scheduler():
-    """Start the APScheduler background scheduler."""
+    """Start the APScheduler background scheduler.
+    
+    Registers two recurring jobs:
+    1. deadline_reminder — runs every hour to check for tasks due in 24h
+    2. notification_cleanup — runs daily at 3 AM to purge old read notifications
+    
+    The scheduler is guarded against double-start in Django's auto-reloader.
+    """
     global _scheduler
 
     # Prevent double-start in Django's auto-reloader
@@ -32,6 +39,7 @@ def start_scheduler():
         id='deadline_reminder',
         name='Deadline Reminder',
         replace_existing=True,
+        max_instances=1,
     )
 
     # Notification cleanup — daily at 3 AM
@@ -41,6 +49,7 @@ def start_scheduler():
         id='notification_cleanup',
         name='Notification Cleanup',
         replace_existing=True,
+        max_instances=1,
     )
 
     _scheduler.start()
@@ -64,8 +73,14 @@ def _run_notification_cleanup():
 
 
 def trigger_job(job_type):
-    """Manually trigger a background job."""
-    from apps.jobs.tasks import deadline_reminder, notification_cleanup
+    """Manually trigger a background job.
+    
+    Supported job types:
+    - deadline_reminder: Check tasks due in 24h and notify assignees
+    - notification_cleanup: Delete read notifications older than 30 days
+    - project_report: Generate a project summary report (requires project_id)
+    """
+    from apps.jobs.tasks import deadline_reminder, notification_cleanup, generate_project_report
 
     job_map = {
         'deadline_reminder': deadline_reminder,
@@ -77,3 +92,9 @@ def trigger_job(job_type):
         raise ValueError(f'Unknown job type: {job_type}')
 
     return func()
+
+
+def trigger_report(project_id):
+    """Trigger a project report generation job."""
+    from apps.jobs.tasks import generate_project_report
+    return generate_project_report(project_id)

@@ -16,8 +16,8 @@ class IsProjectMember(BasePermission):
         ).exists()
 
 
-class IsProjectEditor(BasePermission):
-    """Allow write access to admin or editor members."""
+class IsProjectMemberRole(BasePermission):
+    """Allow write access to admin or member members."""
 
     def has_permission(self, request, view):
         project_id = view.kwargs.get('project_id') or view.kwargs.get('pk')
@@ -26,7 +26,7 @@ class IsProjectEditor(BasePermission):
         return ProjectMember.objects.filter(
             project_id=project_id,
             user=request.user,
-            role__in=['admin', 'editor'],
+            role__in=['admin', 'member'],
         ).exists()
 
 

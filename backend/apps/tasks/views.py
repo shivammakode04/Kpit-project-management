@@ -17,7 +17,7 @@ from apps.tasks.serializers import (
     TaskAttachmentUploadSerializer,
 )
 from apps.stories.models import UserStory
-from apps.projects.models import ProjectMember
+from apps.projects.models import ProjectMember, Project
 from apps.core.utils import log_activity
 
 
@@ -40,8 +40,8 @@ class TaskListCreateView(generics.ListCreateAPIView):
             return Task.objects.none()
 
         qs = Task.objects.filter(story_id=story_id).select_related(
-            'assigned_to', 'created_by', 'story'
-        )
+            'created_by', 'story'
+        ).prefetch_related('assigned_to')
 
         # Filters
         task_status = self.request.query_params.get('status')
@@ -53,19 +53,19 @@ class TaskListCreateView(generics.ListCreateAPIView):
         if priority:
             qs = qs.filter(priority=priority)
         if assigned_to:
-            qs = qs.filter(assigned_to_id=assigned_to)
+            qs = qs.filter(assigned_to__id=assigned_to)
 
         return qs
 
     def create(self, request, *args, **kwargs):
         story = get_object_or_404(UserStory, pk=self.kwargs['story_id'])
-        # Check editor/admin role
+        # Check member/admin role
         if not ProjectMember.objects.filter(
             project=story.project, user=request.user,
-            role__in=['admin', 'editor']
+            role__in=['admin', 'member']
         ).exists():
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Members and admins only.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -94,42 +94,38 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         ).values_list('project_id', flat=True)
         return Task.objects.filter(
             story__project_id__in=user_project_ids
-        ).select_related('assigned_to', 'created_by', 'story')
+        ).select_related('created_by', 'story').prefetch_related('assigned_to')
 
-    def update(self, request, *args, **kwargs):
-        task = self.get_object()
+
+class MyTasksView(generics.ListAPIView):
+    """List tasks assigned to the current user."""
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(
+            assigned_to=self.request.user
+        ).select_related('created_by', 'story').prefetch_related('assigned_to').order_by('-created_at')
+
+
+class ProjectTasksView(generics.ListAPIView):
+    """List all tasks in a project for Kanban board."""
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.kwargs['project_id']
+        project = get_object_or_404(Project, pk=project_id)
+        
+        # Verify user is project member
         if not ProjectMember.objects.filter(
-            project=task.story.project, user=request.user,
-            role__in=['admin', 'editor']
+            project=project, user=self.request.user
         ).exists():
-            return Response(
-                {'detail': 'Editors and admins only.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        return super().update(request, *args, **kwargs)
+            return Task.objects.none()
 
-    def perform_update(self, serializer):
-        task = serializer.save()
-        log_activity(
-            self.request.user.id, task.story.project_id,
-            'updated task', 'task', task.id,
-        )
-
-    def destroy(self, request, *args, **kwargs):
-        task = self.get_object()
-        if not ProjectMember.objects.filter(
-            project=task.story.project, user=request.user,
-            role__in=['admin', 'editor']
-        ).exists():
-            return Response(
-                {'detail': 'Editors and admins only.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        log_activity(
-            request.user.id, task.story.project_id,
-            'deleted task', 'task', task.id,
-        )
-        return super().destroy(request, *args, **kwargs)
+        return Task.objects.filter(
+            story__project_id=project_id
+        ).select_related('created_by', 'story').prefetch_related('assigned_to').order_by('status', '-created_at')
 
 
 class TaskStatusView(APIView):
@@ -140,10 +136,10 @@ class TaskStatusView(APIView):
         task = get_object_or_404(Task, pk=pk)
         if not ProjectMember.objects.filter(
             project=task.story.project, user=request.user,
-            role__in=['admin', 'editor']
+            role__in=['admin', 'member']
         ).exists():
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Members and admins only.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -162,36 +158,38 @@ class TaskStatusView(APIView):
 
 
 class TaskAssignView(APIView):
-    """Assign a task to a user."""
+    """Assign a task to multiple users."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         task = get_object_or_404(Task, pk=pk)
         if not ProjectMember.objects.filter(
             project=task.story.project, user=request.user,
-            role__in=['admin', 'editor']
+            role__in=['admin', 'member']
         ).exists():
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Members and admins only.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = TaskAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        assigned_to = serializer.validated_data['assigned_to']
-        if assigned_to is not None:
-            # Verify assignee is a project member
-            if not ProjectMember.objects.filter(
-                project=task.story.project, user_id=assigned_to
-            ).exists():
+        assigned_to_ids = serializer.validated_data['assigned_to']
+        
+        # Verify all assignees are project members
+        if assigned_to_ids:
+            valid_members = ProjectMember.objects.filter(
+                project=task.story.project, user_id__in=assigned_to_ids
+            ).values_list('user_id', flat=True)
+            
+            if len(valid_members) != len(assigned_to_ids):
                 return Response(
-                    {'detail': 'User is not a project member.'},
+                    {'detail': 'Some users are not project members.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        task.assigned_to_id = assigned_to
-        task.save(update_fields=['assigned_to'])
+        task.assigned_to.set(assigned_to_ids)
 
         log_activity(
             request.user.id, task.story.project_id,
@@ -270,10 +268,10 @@ class TaskAttachmentListView(APIView):
         task = get_object_or_404(Task, pk=task_id)
         if not ProjectMember.objects.filter(
             project=task.story.project, user=request.user,
-            role__in=['admin', 'editor']
+            role__in=['admin', 'member']
         ).exists():
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Members and admins only.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

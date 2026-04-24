@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/my-tasks', label: 'My Tasks', icon: Layers },
   { path: '/projects', label: 'Projects', icon: FolderKanban },
-  { path: '/team', label: 'Team', icon: Users },
+  { path: '/team', label: 'Team', icon: Users, adminOnly: true },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ];

@@ -7,7 +7,7 @@ class CustomUser(AbstractUser):
 
     class Role(models.TextChoices):
         ADMIN = 'admin', 'Admin'
-        EDITOR = 'editor', 'Editor'
+        MEMBER = 'member', 'Member'
         VIEWER = 'viewer', 'Viewer'
 
     email = models.EmailField(unique=True)

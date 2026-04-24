@@ -9,7 +9,7 @@ from apps.notifications.views import (
 
 urlpatterns = [
     path('notifications/', NotificationListView.as_view(), name='notification-list'),
-    path('notifications/<int:pk>/read/', NotificationReadView.as_view(), name='notification-read'),
+    path('notifications/<int:pk>/', NotificationReadView.as_view(), name='notification-detail'),
     path('notifications/mark-all-read/', NotificationMarkAllReadView.as_view(), name='notification-mark-all'),
     path('notifications/unread-count/', NotificationUnreadCountView.as_view(), name='notification-unread-count'),
 ]

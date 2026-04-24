@@ -4,3 +4,4 @@ export * from './stories';
 export * from './tasks';
 export * from './comments';
 export * from './auth';
+export * from './teams';

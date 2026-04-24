@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from apps.stories.models import UserStory
 from apps.stories.serializers import UserStorySerializer, UserStoryCreateSerializer
 from apps.projects.models import Project, ProjectMember
-from apps.core.permissions import IsProjectMember, IsProjectEditor
+from apps.core.permissions import IsProjectMember, IsProjectMemberRole
 from apps.core.utils import log_activity
 
 
@@ -32,13 +32,20 @@ class StoryListCreateView(generics.ListCreateAPIView):
         project_id = self.kwargs['project_id']
         project = get_object_or_404(Project, pk=project_id)
 
-        # Check editor/admin role
+        # Check admin role only
+        if request.user.role != 'admin':
+            return Response(
+                {'detail': 'Only admins can create stories.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Also check project membership
         membership = ProjectMember.objects.filter(
-            project=project, user=request.user, role__in=['admin', 'editor']
+            project=project, user=request.user
         ).first()
         if not membership:
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Not a project member.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -69,13 +76,10 @@ class StoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         story = self.get_object()
-        # Check editor permission
-        if not ProjectMember.objects.filter(
-            project=story.project, user=request.user,
-            role__in=['admin', 'editor']
-        ).exists():
+        # Check admin permission only
+        if request.user.role != 'admin':
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Only admins can update stories.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return super().update(request, *args, **kwargs)
@@ -89,12 +93,9 @@ class StoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         story = self.get_object()
-        if not ProjectMember.objects.filter(
-            project=story.project, user=request.user,
-            role__in=['admin', 'editor']
-        ).exists():
+        if request.user.role != 'admin':
             return Response(
-                {'detail': 'Editors and admins only.'},
+                {'detail': 'Only admins can delete stories.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
         log_activity(

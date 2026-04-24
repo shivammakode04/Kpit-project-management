@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { projectsApi } from '@/api/projects';
+import { teamsApi } from '@/api/teams';
 import type { User, ProjectMember } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -30,8 +30,8 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
     try {
       setLoading(true);
       const [usersRes, membersRes] = await Promise.all([
-        projectsApi.getUsersDirectory(projectId),
-        projectsApi.getMembers(projectId),
+        teamsApi.getAllUsers(projectId),
+        teamsApi.getTeamMembers(projectId),
       ]);
       setAllUsers(usersRes.data);
       setTeamMembers(membersRes.data);
@@ -49,11 +49,12 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
-      loadData();
+      const res = await teamsApi.getAllUsers(projectId);
+      setAllUsers(res.data);
       return;
     }
     try {
-      const res = await projectsApi.getUsersDirectory(projectId, query);
+      const res = await teamsApi.getAllUsers(projectId, query);
       setAllUsers(res.data);
     } catch (error) {
       toast({
@@ -66,12 +67,13 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
 
   const handleInvite = async (userId: number) => {
     try {
-      await projectsApi.inviteMember(projectId, userId);
+      await teamsApi.inviteUser(projectId, userId);
       setInvitedUsers(new Set([...invitedUsers, userId]));
       toast({
         title: 'Success',
         description: 'Invitation sent successfully',
       });
+      // Refresh data to remove invited user from all users list
       loadData();
     } catch (error) {
       toast({
@@ -80,13 +82,6 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
         variant: 'destructive',
       });
     }
-  };
-
-  const getStatusBadge = (status: 'pending' | 'accepted') => {
-    if (status === 'pending') {
-      return <Badge variant="outline" className="bg-amber-50">Pending</Badge>;
-    }
-    return <Badge variant="default" className="bg-green-600">Accepted</Badge>;
   };
 
   return (
@@ -119,7 +114,9 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
             className="w-full"
           />
           <ScrollArea className="h-[400px] rounded-md border p-4">
-            {allUsers.length === 0 ? (
+            {loading ? (
+              <div className="text-center text-sm text-surface-500 py-8">Loading...</div>
+            ) : allUsers.length === 0 ? (
               <div className="text-center text-sm text-surface-500 py-8">
                 No users available to invite
               </div>
@@ -159,7 +156,9 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
       {/* My Team Tab */}
       {activeTab === 'my-team' && (
         <ScrollArea className="h-[400px] rounded-md border p-4">
-          {teamMembers.length === 0 ? (
+          {loading ? (
+            <div className="text-center text-sm text-surface-500 py-8">Loading...</div>
+          ) : teamMembers.length === 0 ? (
             <div className="text-center text-sm text-surface-500 py-8">No team members yet</div>
           ) : (
             <div className="space-y-3">
@@ -181,7 +180,7 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(member.status)}
+                    <Badge variant="default" className="bg-green-600">Active</Badge>
                     <Badge variant="secondary" className="text-xs">{member.role}</Badge>
                   </div>
                 </div>

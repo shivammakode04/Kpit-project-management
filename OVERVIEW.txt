@@ -1,0 +1,488 @@
+================================================================================
+FLOWFORGE - COMPLETE IMPLEMENTATION OVERVIEW
+================================================================================
+
+PROJECT STRUCTURE:
+- Backend: Django 4.2 + DRF + SimpleJWT + APScheduler
+- Frontend: React 19 + Vite + TypeScript + Tailwind + Zustand
+- Database: SQLite
+- API: RESTful with JWT authentication
+
+================================================================================
+BACKEND MODELS
+================================================================================
+
+1. USER MODELS (apps/users/)
+   - CustomUser: username, email, full_name, avatar_url, role, is_active
+   - Fields: id, created_at, updated_at
+
+2. PROJECT MODELS (apps/projects/)
+   - Project: name, description, owner(FK), status, is_archived, start_date, end_date
+   - ProjectMember: project(FK), user(FK), role(admin/member/viewer), status(pending/accepted)
+   - Fields: id, joined_at, created_at
+
+3. STORY MODELS (apps/stories/)
+   - UserStory: project(FK), title, description, status, priority, story_points, created_by(FK)
+   - Fields: id, task_count, created_at, updated_at
+
+4. TASK MODELS (apps/tasks/)
+   - Task: story(FK), title, description, status, priority, assigned_to(M2M), due_date, created_by(FK)
+   - Task fields: estimated_hours, actual_hours, task_type, labels, is_blocked, created_at, updated_at
+   - TaskAttachment: task(FK), file, filename, file_size, content_type, uploaded_by(FK), created_at
+   - Comment: task(FK), user(FK), content, created_at
+   - ActivityLog: user(FK), project(FK), action, target_type, target_id, created_at
+
+5. NOTIFICATION MODELS (apps/notifications/)
+   - Notification: user(FK), type, title, message, is_read, project(FK), related_object_id, created_at
+   - Types: task_assigned, task_updated, task_completed, story_assigned, story_updated, project_invite, deadline_reminder, comment_added, project_updated
+
+6. JOB MODELS (apps/jobs/)
+   - BackgroundJob: job_type, status, payload, result, retry_count, max_retries, error_message, scheduled_at, executed_at, created_at
+
+================================================================================
+BACKEND API ENDPOINTS
+================================================================================
+
+AUTH ENDPOINTS (apps/users/):
+- POST /api/auth/register/ - Register new user
+- POST /api/auth/login/ - Login (returns JWT tokens)
+- POST /api/auth/refresh/ - Refresh access token
+- GET /api/auth/profile/ - Get current user profile
+- PATCH /api/auth/profile/ - Update profile
+- POST /api/auth/profile/avatar/ - Upload avatar
+- POST /api/auth/profile/password/ - Change password
+
+PROJECT ENDPOINTS (apps/projects/):
+- GET /api/projects/ - List user's projects
+- POST /api/projects/ - Create project
+- GET /api/projects/{id}/ - Get project detail
+- PATCH /api/projects/{id}/ - Update project
+- DELETE /api/projects/{id}/ - Delete project
+- POST /api/projects/{id}/archive/ - Toggle archive
+- GET /api/projects/{id}/members/ - List members (supports ?status=accepted)
+- POST /api/projects/{id}/members/ - Add member
+- DELETE /api/projects/{id}/members/{user_id}/ - Remove member
+- PATCH /api/projects/{id}/members/{user_id}/role/ - Change role
+- GET /api/projects/{id}/users-directory/ - Get all users (searchable with ?q=)
+- POST /api/projects/{id}/invite/ - Invite user (creates pending member + notification)
+- POST /api/projects/invites/{member_id}/accept/ - Accept invitation
+- GET /api/projects/{id}/activity/ - Activity log
+- GET /api/projects/{id}/analytics/ - Project analytics
+- GET /api/projects/{id}/stories/ - List stories
+- GET /api/projects/{id}/tasks/ - List all tasks in project
+- GET /api/projects/{id}/export/?format=csv - Export CSV
+- GET /api/projects/{id}/export/?format=pdf - Export PDF
+
+STORY ENDPOINTS (apps/stories/):
+- GET /api/projects/{id}/stories/ - List stories
+- POST /api/projects/{id}/stories/ - Create story
+- GET /api/stories/{id}/ - Get story detail
+- PATCH /api/stories/{id}/ - Update story
+- DELETE /api/stories/{id}/ - Delete story
+
+TASK ENDPOINTS (apps/tasks/):
+- GET /api/stories/{id}/tasks/ - List tasks for story
+- POST /api/stories/{id}/tasks/ - Create task
+- GET /api/tasks/{id}/ - Get task detail
+- PATCH /api/tasks/{id}/ - Update task
+- DELETE /api/tasks/{id}/ - Delete task
+- PATCH /api/tasks/{id}/status/ - Update status only
+- POST /api/tasks/{id}/assign/ - Assign user
+- GET /api/tasks/{id}/comments/ - List comments
+- POST /api/tasks/{id}/comments/ - Add comment
+- GET /api/tasks/{id}/attachments/ - List attachments
+- POST /api/tasks/{id}/attachments/ - Upload file
+- GET /api/tasks/my/ - My assigned tasks
+
+NOTIFICATION ENDPOINTS (apps/notifications/):
+- GET /api/notifications/ - List notifications
+- PATCH /api/notifications/{id}/ - Mark as read
+- POST /api/notifications/mark-all-read/ - Mark all read
+- GET /api/notifications/unread-count/ - Get unread count
+
+BACKGROUND JOB ENDPOINTS (apps/jobs/):
+- GET /api/jobs/ - List job history
+- POST /api/jobs/trigger/ - Trigger job manually
+
+SEARCH ENDPOINTS (apps/search/):
+- GET /api/search/?q=term - Global search
+
+================================================================================
+BACKEND FEATURES IMPLEMENTED
+================================================================================
+
+1. AUTHENTICATION & AUTHORIZATION
+   - JWT token-based authentication (SimpleJWT)
+   - Role-based access control (Admin/Member/Viewer)
+   - Custom user model with avatar support
+   - Password hashing and validation
+
+2. PROJECT MANAGEMENT
+   - Create/Read/Update/Delete projects
+   - Archive/Unarchive projects
+   - Project member management with roles
+   - Project analytics and activity logging
+
+3. TEAM INVITATION WORKFLOW
+   - Invite users to projects (creates pending member)
+   - Accept/Reject invitations
+   - Notification system for invites
+   - Status tracking (pending/accepted)
+
+4. STORY & TASK MANAGEMENT
+   - Hierarchical structure: Project → Story → Task
+   - Task assignment to multiple users (M2M)
+   - Task status tracking (todo/in_progress/done/blocked/testing)
+   - Priority levels (low/medium/high/critical)
+   - Due date tracking
+   - Story points estimation
+
+5. BACKGROUND JOBS (APScheduler)
+   - deadline_reminder: Runs hourly, sends notifications for tasks due in 24 hours
+   - notification_cleanup: Runs daily at 3 AM, deletes read notifications older than 30 days
+   - Retry logic with exponential backoff (2s → 4s → 8s)
+   - Max 3 retries per job
+   - Job execution tracking in BackgroundJob model
+
+6. NOTIFICATIONS
+   - In-app notification system
+   - Multiple notification types
+   - Unread count tracking
+   - Mark as read functionality
+   - Project-specific notifications
+
+7. FILE ATTACHMENTS
+   - Upload files to tasks (5MB limit)
+   - MIME type validation
+   - File metadata tracking (size, type, uploader)
+
+8. COMMENTS
+   - Add comments to tasks
+   - User and timestamp tracking
+
+9. ACTIVITY LOGGING
+   - Track all project actions
+   - User, action, target type, and timestamp
+
+10. SECURITY
+    - Input validation and sanitization (bleach)
+    - SQL injection prevention (Django ORM)
+    - CORS configuration
+    - Rate limiting (100/hour for anonymous, 1000/hour for authenticated)
+    - File upload validation
+
+================================================================================
+FRONTEND COMPONENTS
+================================================================================
+
+PAGES:
+- LandingPage.tsx - Public landing page with features and CTA
+- LoginPage.tsx - User login form
+- RegisterPage.tsx - User registration form
+- DashboardPage.tsx - Main dashboard with task overview
+- ProfilePage.tsx - User profile with stats and charts
+- ProjectsListPage.tsx - List all user projects
+- ProjectPage.tsx - Project detail with Kanban board
+- StoryViewPage.tsx - Story detail view
+- AdminPanel.tsx - Admin dashboard
+
+COMPONENTS:
+- NotificationBell.tsx - Notification dropdown with accept invite button
+- TeamManagement.tsx - Two tabs: "All Users" (directory) and "My Team" (members)
+- TaskAssignmentSelect.tsx - Dropdown showing only accepted team members
+- KanbanBoard.tsx - Main Kanban container with drag-and-drop
+- KanbanColumn.tsx - Droppable column for task status
+- KanbanCard.tsx - Draggable task card with priority badges
+- Dashboard.tsx - Task grouping by due date
+- Profile.tsx - User profile with stats and charts
+- CreateProjectModal.tsx - Create new project
+- CreateStoryModal.tsx - Create new story
+- CreateTaskModal.tsx - Create new task (with TaskAssignmentSelect)
+- CreateTaskModal.tsx - Create new task
+- ConfirmDeleteModal.tsx - Confirm delete action
+- Avatar.tsx - User avatar display
+- EmptyState.tsx - Empty state placeholder
+- PriorityBadge.tsx - Priority badge display
+- StatusChip.tsx - Status chip display
+- PageShell.tsx - Main layout wrapper
+- Breadcrumbs.tsx - Navigation breadcrumbs
+
+UI COMPONENTS (shadcn/ui style):
+- avatar.tsx - Avatar, AvatarImage, AvatarFallback
+- badge.tsx - Badge with variants
+- button.tsx - Button with variants and sizes
+- card.tsx - Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+- input.tsx - Input field
+- scroll-area.tsx - ScrollArea
+- dropdown-menu.tsx - Dropdown menu components
+- select.tsx - Select component
+- tabs.tsx - Tabs component
+- toaster.tsx - Toast notification display
+- Modal.tsx - Modal dialog
+- Skeleton.tsx - Loading skeleton
+
+================================================================================
+FRONTEND API SERVICES
+================================================================================
+
+auth.ts:
+- register(data) - Register new user
+- login(username, password) - Login
+- refreshToken() - Refresh JWT token
+- getProfile() - Get current user profile
+- updateProfile(data) - Update profile
+- uploadAvatar(file) - Upload avatar
+- changePassword(data) - Change password
+- listUsers() - List all users
+
+projects.ts:
+- list(page) - List projects
+- get(id) - Get project detail
+- create(data) - Create project
+- update(id, data) - Update project
+- delete(id) - Delete project
+- archive(id) - Toggle archive
+- getMembers(id, status) - Get members (with optional status filter)
+- getUsersDirectory(id, query) - Get all users (searchable)
+- addMember(projectId, data) - Add member
+- inviteMember(projectId, userId) - Invite user
+- acceptInvite(memberId) - Accept invitation
+- removeMember(projectId, userId) - Remove member
+- changeMemberRole(projectId, userId, role) - Change role
+- getActivity(id, page) - Get activity log
+- getAnalytics(id) - Get analytics
+- getStories(id) - Get stories
+- getTasks(id) - Get all tasks
+- exportCsv(id) - Export CSV
+- exportPdf(id) - Export PDF
+
+stories.ts:
+- list(projectId, page) - List stories
+- get(id) - Get story detail
+- create(projectId, data) - Create story
+- update(id, data) - Update story
+- delete(id) - Delete story
+
+tasks.ts:
+- list(storyId, params) - List tasks for story
+- listByProject(projectId, params) - List all tasks in project
+- getMyTasks() - Get my assigned tasks
+- get(id) - Get task detail
+- create(storyId, data) - Create task
+- update(id, data) - Update task
+- delete(id) - Delete task
+- updateStatus(id, status) - Update status only
+- assign(id, assignedTo) - Assign user
+- getComments(taskId) - Get comments
+- addComment(taskId, content) - Add comment
+- deleteComment(commentId) - Delete comment
+- getAttachments(taskId) - Get attachments
+- uploadAttachment(taskId, file) - Upload file
+
+notifications.ts:
+- list() - List notifications
+- get(id) - Get notification detail
+- markAsRead(id) - Mark as read
+- markAllAsRead() - Mark all as read
+- getUnreadCount() - Get unread count
+- delete(id) - Delete notification
+
+================================================================================
+FRONTEND STATE MANAGEMENT
+================================================================================
+
+Zustand Stores:
+- authStore.ts - User authentication state
+- themeStore.ts - Dark/light theme state
+- notificationStore.ts - Notification state (deprecated, using NotificationBell component instead)
+
+React Query:
+- Used for server state management
+- Automatic caching and refetching
+- Optimistic updates for better UX
+
+================================================================================
+FRONTEND FEATURES IMPLEMENTED
+================================================================================
+
+1. AUTHENTICATION
+   - Login/Register forms with validation
+   - JWT token management
+   - Protected routes
+   - Auto-logout on token expiry
+
+2. DASHBOARD
+   - Task overview grouped by due date
+   - Color-coded priority badges
+   - Status icons
+   - Quick task statistics
+
+3. KANBAN BOARD
+   - Drag-and-drop task management
+   - Three columns: To Do, In Progress, Done
+   - Optimistic updates
+   - Real-time status changes
+
+4. PROJECT MANAGEMENT
+   - Create/Edit/Delete projects
+   - Archive/Unarchive projects
+   - Project analytics
+   - Activity logging
+
+5. TEAM MANAGEMENT
+   - Invite users to projects
+   - View all users in database
+   - Search users by name/email
+   - Accept/Reject invitations
+   - View team members with status badges
+
+6. TASK MANAGEMENT
+   - Create/Edit/Delete tasks
+   - Assign tasks to accepted team members only
+   - Set priority and due date
+   - Add comments and attachments
+   - Track task status
+
+7. NOTIFICATIONS
+   - Real-time notification bell
+   - Unread count badge
+   - Accept invite button in notifications
+   - Mark as read functionality
+   - Auto-refresh every 30 seconds
+
+8. USER PROFILE
+   - View profile information
+   - Edit profile details
+   - Upload avatar
+   - View statistics (tasks completed, projects, streak)
+   - Activity timeline
+   - Task distribution charts
+
+9. DARK MODE
+   - Full dark/light theme support
+   - Persistent theme preference
+
+10. RESPONSIVE DESIGN
+    - Mobile-friendly layout
+    - Tailwind CSS utility classes
+    - Responsive grid and flexbox
+
+================================================================================
+DEPENDENCIES
+================================================================================
+
+BACKEND (requirements.txt):
+- Django==4.2.18
+- djangorestframework==3.15.2
+- djangorestframework-simplejwt==5.4.0
+- django-cors-headers==4.6.0
+- drf-spectacular==0.28.0
+- Pillow==12.1.1
+- APScheduler==3.10.4
+- python-dotenv==1.2.2
+- gunicorn==23.0.0
+- reportlab==4.4.0
+
+FRONTEND (package.json):
+- react@19
+- react-dom@19
+- react-router-dom
+- vite
+- typescript
+- tailwindcss@4
+- zustand
+- @tanstack/react-query
+- framer-motion
+- lucide-react
+- react-hook-form
+- @hookform/resolvers
+- zod
+- recharts
+- @dnd-kit/core
+- @dnd-kit/sortable
+- @dnd-kit/utilities
+- axios
+
+================================================================================
+NEXT FEATURES TO IMPLEMENT
+================================================================================
+
+1. Real-time updates (WebSocket)
+2. File preview/download
+3. Task dependencies
+4. Sprint planning
+5. Burndown charts
+6. Time tracking
+7. Email notifications
+8. Two-factor authentication
+9. Team roles and permissions
+10. Custom fields
+11. Integrations (Slack, GitHub, etc.)
+12. Mobile app
+13. Advanced search filters
+14. Bulk operations
+15. Recurring tasks
+
+================================================================================
+DEPLOYMENT CHECKLIST
+================================================================================
+
+BACKEND:
+- [ ] Set SECRET_KEY in environment
+- [ ] Set DEBUG=False
+- [ ] Configure ALLOWED_HOSTS
+- [ ] Set up database (PostgreSQL recommended for production)
+- [ ] Run migrations
+- [ ] Collect static files
+- [ ] Configure email backend
+- [ ] Set up SSL/HTTPS
+- [ ] Configure CORS properly
+- [ ] Set up logging
+- [ ] Configure APScheduler for production
+
+FRONTEND:
+- [ ] Build production bundle (npm run build)
+- [ ] Configure API endpoint
+- [ ] Set up CDN for static assets
+- [ ] Configure analytics
+- [ ] Test on multiple browsers
+- [ ] Optimize images
+- [ ] Set up error tracking
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+BACKEND:
+- [ ] Unit tests for models
+- [ ] Unit tests for serializers
+- [ ] Integration tests for API endpoints
+- [ ] Authentication tests
+- [ ] Permission tests
+- [ ] Background job tests
+
+FRONTEND:
+- [ ] Component tests
+- [ ] Integration tests
+- [ ] E2E tests
+- [ ] Performance tests
+- [ ] Accessibility tests
+
+================================================================================
+KNOWN ISSUES & FIXES
+================================================================================
+
+1. Avatar import casing - FIXED
+   - Changed from Avatar.tsx to avatar.tsx for consistency
+
+2. Notification API method names - FIXED
+   - Changed markRead to markAsRead
+   - Changed markAllRead to markAllAsRead
+
+3. TaskAttachment content_type field - FIXED
+   - Added default value 'application/octet-stream'
+
+4. Notification store data structure - FIXED
+   - Removed .results property access (API returns array directly)
+
+================================================================================

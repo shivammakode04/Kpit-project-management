@@ -30,6 +30,7 @@ export function TaskAssignmentSelect({
   const loadMembers = async () => {
     try {
       setLoading(true);
+      // Only load accepted members for task assignment
       const res = await projectsApi.getMembers(projectId, 'accepted');
       setMembers(res.data);
     } catch (error) {

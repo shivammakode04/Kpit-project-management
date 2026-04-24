@@ -8,9 +8,13 @@ from apps.tasks.views import (
     CommentListCreateView,
     CommentDeleteView,
     TaskAttachmentListView,
+    MyTasksView,
+    ProjectTasksView,
 )
 
 urlpatterns = [
+    path('tasks/my/', MyTasksView.as_view(), name='my-tasks'),
+    path('projects/<int:project_id>/tasks/', ProjectTasksView.as_view(), name='project-tasks'),
     path('stories/<int:story_id>/tasks/', TaskListCreateView.as_view(), name='task-list'),
     path('tasks/<int:pk>/', TaskDetailView.as_view(), name='task-detail'),
     path('tasks/<int:pk>/status/', TaskStatusView.as_view(), name='task-status'),

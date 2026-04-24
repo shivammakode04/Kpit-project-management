@@ -14,7 +14,7 @@ class UserStorySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'project', 'title', 'description',
             'status', 'priority', 'created_by', 'created_by_name',
-            'task_count', 'created_at',
+            'task_count', 'story_points', 'created_at',
         ]
         read_only_fields = ['id', 'project', 'created_by', 'created_at']
 
@@ -27,4 +27,4 @@ class UserStoryCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserStory
-        fields = ['id', 'title', 'description', 'status', 'priority']
+        fields = ['id', 'title', 'description', 'status', 'priority', 'story_points']

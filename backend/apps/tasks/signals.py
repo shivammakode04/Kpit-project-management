@@ -17,16 +17,18 @@ def track_task_changes(sender, instance, **kwargs):
         return
 
     instance._old_status = old_task.status
-    instance._old_assigned_to = old_task.assigned_to_id
+    instance._old_assigned_to = list(old_task.assigned_to.values_list('id', flat=True))
 
 
 @receiver(post_save, sender=Task)
 def notify_task_changes(sender, instance, created, **kwargs):
     """Send notifications on task assignment/status changes."""
     if created:
-        if instance.assigned_to_id:
+        # Notify all assigned users when task is created
+        assigned_users = instance.assigned_to.all()
+        for user in assigned_users:
             create_notification(
-                instance.assigned_to_id, 'task_assigned',
+                user.id, 'task_assigned',
                 f'You have been assigned to task "{instance.title}".',
             )
         return
@@ -34,26 +36,30 @@ def notify_task_changes(sender, instance, created, **kwargs):
     old_status = getattr(instance, '_old_status', None)
     old_assigned = getattr(instance, '_old_assigned_to', None)
 
+    # Get current assigned users
+    current_assigned = set(instance.assigned_to.values_list('id', flat=True))
+    old_assigned_set = set(old_assigned) if old_assigned else set()
+
     # Notify on assignment change
-    if old_assigned != instance.assigned_to_id and instance.assigned_to_id:
-        create_notification(
-            instance.assigned_to_id, 'task_assigned',
-            f'You have been assigned to task "{instance.title}".',
-        )
-        log_activity(
-            instance.assigned_to_id,
-            instance.story.project_id,
-            f'assigned to task "{instance.title}"',
-            'task', instance.id,
-        )
+    if old_assigned_set != current_assigned:
+        for user_id in current_assigned - old_assigned_set:
+            create_notification(
+                user_id, 'task_assigned',
+                f'You have been assigned to task "{instance.title}".',
+            )
+            log_activity(
+                user_id,
+                instance.story.project_id,
+                f'assigned to task "{instance.title}"',
+                'task', instance.id,
+            )
 
     # Notify on status change
     if old_status and old_status != instance.status:
         recipients = set()
         if instance.created_by_id:
             recipients.add(instance.created_by_id)
-        if instance.assigned_to_id:
-            recipients.add(instance.assigned_to_id)
+        recipients.update(current_assigned)
 
         for user_id in recipients:
             create_notification(
@@ -64,13 +70,17 @@ def notify_task_changes(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Comment)
 def notify_comment_added(sender, instance, created, **kwargs):
-    """Notify task assignee when a comment is added."""
+    """Notify task assignees when a comment is added."""
     if not created:
         return
 
     task = instance.task
-    if task.assigned_to_id and task.assigned_to_id != instance.user_id:
-        create_notification(
-            task.assigned_to_id, 'comment_added',
-            f'{instance.user.username} commented on task "{task.title}".',
-        )
+    assigned_users = task.assigned_to.all()
+    
+    # Notify all assigned users except the commenter
+    for user in assigned_users:
+        if user.id != instance.user_id:
+            create_notification(
+                user.id, 'comment_added',
+                f'{instance.user.username} commented on task "{task.title}".',
+            )

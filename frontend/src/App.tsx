@@ -141,11 +141,11 @@ export default function App() {
       <Route
         path="/team"
         element={
-          <PrivateRoute>
+          <AdminRoute>
             <AppShell>
               <PageTransition><TeamPage /></PageTransition>
             </AppShell>
-          </PrivateRoute>
+          </AdminRoute>
         }
       />
       <Route
