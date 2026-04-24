@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import PageShell from '@/components/layout/PageShell';
-import { Toaster } from '@/components/ui/toaster';
 import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
@@ -15,6 +14,8 @@ import StoryViewPage from '@/pages/story/StoryViewPage';
 import ProfilePage from '@/pages/profile/ProfilePage';
 import AdminPanel from '@/pages/admin/AdminPanel';
 import MembersPage from '@/pages/project/MembersPage';
+import MyTasksPage from '@/pages/tasks/MyTasksPage';
+import TeamPage from '@/pages/team/TeamPage';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -70,9 +71,7 @@ export default function App() {
   }, [isAuthenticated, loadUser]);
 
   return (
-    <>
-      <Toaster />
-      <Routes>
+    <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -85,6 +84,16 @@ export default function App() {
           <PrivateRoute>
             <AppShell>
               <PageTransition><DashboardPage /></PageTransition>
+            </AppShell>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/my-tasks"
+        element={
+          <PrivateRoute>
+            <AppShell>
+              <PageTransition><MyTasksPage /></PageTransition>
             </AppShell>
           </PrivateRoute>
         }
@@ -130,6 +139,16 @@ export default function App() {
         }
       />
       <Route
+        path="/team"
+        element={
+          <PrivateRoute>
+            <AppShell>
+              <PageTransition><TeamPage /></PageTransition>
+            </AppShell>
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/profile"
         element={
           <PrivateRoute>
@@ -153,6 +172,5 @@ export default function App() {
       {/* Redirects */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </>
   );
 }

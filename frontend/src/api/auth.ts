@@ -28,6 +28,27 @@ export const authApi = {
   changePassword: (data: { old_password: string; new_password: string; new_password_confirm: string }) =>
     api.post('/auth/profile/password/', data),
 
-  listUsers: () =>
-    api.get<User[]>('/auth/users/'),
+  listUsers: (params?: { search?: string; role?: string; is_active?: string }) =>
+    api.get<User[]>('/auth/users/', { params }),
+
+  getUser: (id: number) =>
+    api.get<any>(`/auth/users/${id}/`),
+
+  updateUserRole: (id: number, role: string) =>
+    api.patch<User>(`/auth/users/${id}/role/`, { role }),
+
+  toggleUserActive: (id: number) =>
+    api.post<{ detail: string; user: User }>(`/auth/users/${id}/toggle-active/`),
+
+  getUserWorkload: (id: number) =>
+    api.get<any>(`/auth/users/${id}/workload/`),
+
+  getMyTasks: (params?: Record<string, string>) =>
+    api.get<any>('/auth/my/tasks/', { params }),
+
+  getMyActivity: () =>
+    api.get<any>('/auth/my/activity/'),
+
+  getWorkspaceStats: () =>
+    api.get<any>('/auth/my/stats/'),
 };

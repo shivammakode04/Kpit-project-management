@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FolderKanban, User, Shield, Search,
-  Bell, Moon, Sun, Menu, X, LogOut, ChevronLeft, Keyboard, Users,
+  Bell, Moon, Sun, Menu, X, LogOut, ChevronLeft, Keyboard, Users, Layers,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -21,7 +21,9 @@ interface PageShellProps {
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/my-tasks', label: 'My Tasks', icon: Layers },
   { path: '/projects', label: 'Projects', icon: FolderKanban },
+  { path: '/team', label: 'Team', icon: Users },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ];
