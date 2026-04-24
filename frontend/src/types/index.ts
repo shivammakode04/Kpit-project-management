@@ -1,11 +1,13 @@
 export interface User {
   id: number;
   username: string;
-  email: string;
   full_name: string;
-  avatar_url: string | null;
-  role: 'admin' | 'editor' | 'viewer';
+  email: string;
+  avatar_url?: string;
+  is_active: boolean;
+  role?: 'admin' | 'member' | 'viewer';
   created_at: string;
+  updated_at: string;
 }
 
 export interface Project {
@@ -16,6 +18,12 @@ export interface Project {
   owner_name: string;
   is_archived: boolean;
   member_count: number;
+  status?: 'active' | 'on_hold' | 'completed' | 'cancelled';
+  start_date?: string;
+  end_date?: string;
+  estimated_hours?: number;
+  actual_hours?: number;
+  progress_percentage?: number;
   created_at: string;
 }
 
@@ -24,7 +32,8 @@ export interface ProjectMember {
   project: number;
   user: number;
   user_detail: User;
-  role: 'admin' | 'editor' | 'viewer';
+  role: 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'accepted';
   joined_at: string;
 }
 
@@ -33,11 +42,12 @@ export interface UserStory {
   project: number;
   title: string;
   description: string;
-  status: 'todo' | 'in_progress' | 'done';
+  status: Status;
   priority: 'low' | 'medium' | 'high';
   created_by: number;
   created_by_name: string;
   task_count: number;
+  story_points?: number;
   created_at: string;
 }
 
@@ -48,10 +58,17 @@ export interface Task {
   project_id: number;
   title: string;
   description: string;
-  status: 'todo' | 'in_progress' | 'done';
+  status: Status;
   priority: 'low' | 'medium' | 'high';
   assigned_to: number | null;
   assigned_to_name: string | null;
+  assigned_to_names: string[]; // Array of all assigned usernames
+  assigned_to_details?: { // Array of all assigned users with details
+    id: number;
+    username: string;
+    full_name: string;
+    avatar_url: string | null;
+  }[];
   due_date: string | null;
   created_by: number;
   created_by_name: string;
@@ -76,6 +93,9 @@ export interface Notification {
   type: string;
   message: string;
   is_read: boolean;
+  project?: number;
+  project_name?: string;
+  related_object_id?: number;
   created_at: string;
 }
 
@@ -133,5 +153,5 @@ export interface SearchResults {
   tasks: Task[];
 }
 
-export type Status = 'todo' | 'in_progress' | 'done';
+export type Status = 'todo' | 'in_progress' | 'done' | 'blocked' | 'testing';
 export type Priority = 'low' | 'medium' | 'high';

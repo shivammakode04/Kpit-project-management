@@ -5,6 +5,12 @@ export const tasksApi = {
   list: (storyId: number, params?: Record<string, string>) =>
     api.get<PaginatedResponse<Task>>(`/stories/${storyId}/tasks/`, { params }),
 
+  listByProject: (projectId: number, params?: Record<string, string>) =>
+    api.get<PaginatedResponse<Task>>(`/projects/${projectId}/tasks/`, { params }),
+
+  getMyTasks: () =>
+    api.get<PaginatedResponse<Task>>('/tasks/my/'),
+
   get: (id: number) =>
     api.get<Task>(`/tasks/${id}/`),
 
@@ -12,7 +18,7 @@ export const tasksApi = {
     title: string;
     description?: string;
     priority?: string;
-    assigned_to?: number | null;
+    assigned_to?: number[];
     due_date?: string | null;
   }) =>
     api.post<Task>(`/stories/${storyId}/tasks/`, data),

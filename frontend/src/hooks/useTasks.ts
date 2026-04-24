@@ -62,7 +62,17 @@ export function useCreateTask(storyId: number) {
       priority?: string;
       assigned_to?: number | null;
       due_date?: string | null;
-    }) => tasksApi.create(storyId, data).then((r) => r.data),
+    }) => {
+      // Convert assigned_to to array format for backend
+      const payload = {
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        assigned_to: data.assigned_to ? [data.assigned_to] : [],
+        due_date: data.due_date
+      };
+      return tasksApi.create(storyId, payload).then((r) => r.data);
+    },
     onSuccess: (task: Task) => {
       qc.invalidateQueries({ queryKey: ['tasks', storyId] });
       qc.invalidateQueries({ queryKey: ['stories'] });

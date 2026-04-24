@@ -2,15 +2,21 @@ import api from './client';
 import type { Notification, PaginatedResponse } from '@/types';
 
 export const notificationsApi = {
-  list: (page = 1) =>
-    api.get<PaginatedResponse<Notification>>('/notifications/', { params: { page } }),
+  list: () =>
+    api.get<Notification[]>('/notifications/'),
 
-  markRead: (id: number) =>
-    api.patch<Notification>(`/notifications/${id}/read/`),
+  get: (id: number) =>
+    api.get<Notification>(`/notifications/${id}/`),
 
-  markAllRead: () =>
+  markAsRead: (id: number) =>
+    api.patch<Notification>(`/notifications/${id}/`, { is_read: true }),
+
+  markAllAsRead: () =>
     api.post('/notifications/mark-all-read/'),
 
   getUnreadCount: () =>
     api.get<{ unread_count: number }>('/notifications/unread-count/'),
+
+  delete: (id: number) =>
+    api.delete(`/notifications/${id}/`),
 };

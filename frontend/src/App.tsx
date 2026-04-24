@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import PageShell from '@/components/layout/PageShell';
+import { Toaster } from '@/components/ui/toaster';
+import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
@@ -12,6 +14,7 @@ import ProjectPage from '@/pages/project/ProjectPage';
 import StoryViewPage from '@/pages/story/StoryViewPage';
 import ProfilePage from '@/pages/profile/ProfilePage';
 import AdminPanel from '@/pages/admin/AdminPanel';
+import MembersPage from '@/pages/project/MembersPage';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -67,8 +70,11 @@ export default function App() {
   }, [isAuthenticated, loadUser]);
 
   return (
-    <Routes>
+    <>
+      <Toaster />
+      <Routes>
       {/* Public */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -99,6 +105,16 @@ export default function App() {
           <PrivateRoute>
             <AppShell>
               <PageTransition><ProjectPage /></PageTransition>
+            </AppShell>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/projects/:id/members"
+        element={
+          <PrivateRoute>
+            <AppShell>
+              <PageTransition><MembersPage /></PageTransition>
             </AppShell>
           </PrivateRoute>
         }
@@ -135,8 +151,8 @@ export default function App() {
       />
 
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

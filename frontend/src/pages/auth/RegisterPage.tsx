@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { getErrorMessage } from '@/lib/utils';
 
@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { register: registerUser } = useAuthStore();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -33,10 +34,17 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     try {
       await registerUser(data);
-      toast.success('Account created! Welcome to FlowForge.');
+      toast({
+        title: 'Success',
+        description: 'Account created! Welcome to FlowForge.',
+      });
       navigate('/dashboard');
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast({
+        title: 'Error',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      });
     }
   };
 

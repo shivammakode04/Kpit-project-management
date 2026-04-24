@@ -3,13 +3,16 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FolderKanban, User, Shield, Search,
-  Bell, Moon, Sun, Menu, X, LogOut, ChevronLeft, Keyboard,
+  Bell, Moon, Sun, Menu, X, LogOut, ChevronLeft, Keyboard, Users,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useThemeStore } from '@/store/themeStore';
-import { cn, getInitials, timeAgo } from '@/lib/utils';
+import { cn, getInitials, timeAgo, getErrorMessage } from '@/lib/utils';
 import { searchApi } from '@/api/search';
+import { projectsApi } from '@/api/projects';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { SearchResults } from '@/types';
 
 interface PageShellProps {
@@ -20,7 +23,7 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/projects', label: 'Projects', icon: FolderKanban },
   { path: '/profile', label: 'Profile', icon: User },
-  { path: '/admin', label: 'Admin', icon: Shield },
+  { path: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ];
 
 export default function PageShell({ children }: PageShellProps) {
@@ -34,6 +37,23 @@ export default function PageShell({ children }: PageShellProps) {
   const { user, logout } = useAuthStore();
   const { unreadCount, notifications, isOpen: notifOpen, togglePanel, closePanel, markRead, markAllRead, fetchNotifications, fetchUnreadCount } = useNotificationStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const handleAcceptInvite = async (memberId: number, notifId: number) => {
+    try {
+      await projectsApi.acceptInvite(memberId);
+      toast.success('Invitation accepted!');
+      markRead(notifId);
+      closePanel();
+      fetchNotifications();
+      fetchUnreadCount();
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['project-members'] });
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
 
   // Apply dark class
   useEffect(() => {
@@ -99,8 +119,10 @@ export default function PageShell({ children }: PageShellProps) {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-            const active = location.pathname.startsWith(path);
+          {NAV_ITEMS
+            .filter(({ adminOnly }) => !adminOnly || user?.role === 'admin')
+            .map(({ path, label, icon: Icon }) => {
+            const active = location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path));
             return (
               <Link
                 key={path}
@@ -265,7 +287,20 @@ export default function PageShell({ children }: PageShellProps) {
                             )}
                           >
                             <p className="text-sm">{n.message}</p>
-                            <p className="text-xs text-surface-500 mt-1">{timeAgo(n.created_at)}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs text-surface-500">{timeAgo(n.created_at)}</p>
+                              {n.type === 'project_invite' && n.related_object_id && !n.is_read && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAcceptInvite(n.related_object_id!, n.id);
+                                  }}
+                                  className="text-[10px] px-2 py-1 bg-brand-500 text-white rounded-md font-medium hover:bg-brand-600 transition-colors"
+                                >
+                                  Accept
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))
                       )}

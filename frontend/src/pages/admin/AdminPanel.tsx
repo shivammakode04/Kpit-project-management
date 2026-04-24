@@ -228,7 +228,7 @@ function UserRow({ user }: { user: User }) {
           className="text-xs border border-surface-200 dark:border-surface-700 rounded-lg px-2 py-1 bg-white dark:bg-surface-800 capitalize"
         >
           <option value="admin">Admin</option>
-          <option value="editor">Editor</option>
+          <option value="member">Member</option>
           <option value="viewer">Viewer</option>
         </select>
       </td>

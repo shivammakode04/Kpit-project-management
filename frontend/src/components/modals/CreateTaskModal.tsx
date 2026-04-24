@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useCreateTask } from '@/hooks/useTasks';
+import { TaskAssignmentSelect } from '@/components/TaskAssignmentSelect';
+import { projectsApi } from '@/api/projects';
 import type { User } from '@/types';
 
 const schema = z.object({
@@ -20,11 +22,13 @@ interface CreateTaskModalProps {
   open: boolean;
   onClose: () => void;
   storyId: number;
+  projectId?: number;
   members?: User[];
 }
 
-export default function CreateTaskModal({ open, onClose, storyId, members = [] }: CreateTaskModalProps) {
+export default function CreateTaskModal({ open, onClose, storyId, projectId, members = [] }: CreateTaskModalProps) {
   const { mutateAsync, isPending } = useCreateTask(storyId);
+  const [assignedTo, setAssignedTo] = useState<number | null>(null);
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { priority: 'medium' },
@@ -37,9 +41,10 @@ export default function CreateTaskModal({ open, onClose, storyId, members = [] }
       title: data.title,
       description: data.description,
       priority: data.priority,
-      assigned_to: data.assigned_to ? Number(data.assigned_to) : null,
+      assigned_to: assignedTo,
       due_date: data.due_date || null,
     });
+    setAssignedTo(null);
     onClose();
   };
 
@@ -85,10 +90,20 @@ export default function CreateTaskModal({ open, onClose, storyId, members = [] }
                     <input type="date" {...register('due_date')} className="input-field" />
                   </div>
                 </div>
-                {members.length > 0 && (
+                {projectId && (
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Assign To</label>
-                    <select {...register('assigned_to')} className="input-field">
+                    <TaskAssignmentSelect
+                      projectId={projectId}
+                      value={assignedTo}
+                      onChange={setAssignedTo}
+                    />
+                  </div>
+                )}
+                {!projectId && members.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Assign To</label>
+                    <select value={assignedTo || ''} onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : null)} className="input-field">
                       <option value="">Unassigned</option>
                       {members.map((m) => (
                         <option key={m.id} value={m.id}>{m.full_name || m.username}</option>

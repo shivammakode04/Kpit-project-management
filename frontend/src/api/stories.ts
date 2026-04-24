@@ -8,10 +8,10 @@ export const storiesApi = {
   get: (id: number) =>
     api.get<UserStory>(`/stories/${id}/`),
 
-  create: (projectId: number, data: { title: string; description?: string; priority?: string }) =>
+  create: (projectId: number, data: { title: string; description?: string; priority?: string; story_points?: number }) =>
     api.post<UserStory>(`/projects/${projectId}/stories/`, data),
 
-  update: (id: number, data: Partial<Pick<UserStory, 'title' | 'description' | 'status' | 'priority'>>) =>
+  update: (id: number, data: Partial<Pick<UserStory, 'title' | 'description' | 'status' | 'priority' | 'story_points'>>) =>
     api.patch<UserStory>(`/stories/${id}/`, data),
 
   delete: (id: number) =>

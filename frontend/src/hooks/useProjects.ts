@@ -36,6 +36,17 @@ export function useProjectMembers(projectId: number) {
   });
 }
 
+export function useAcceptedProjectMembers(projectId: number) {
+  return useQuery({
+    queryKey: ['project-members', projectId, 'accepted'],
+    queryFn: async () => {
+      const { data } = await projectsApi.getMembers(projectId, 'accepted');
+      return data;
+    },
+    enabled: !!projectId,
+  });
+}
+
 export function useProjectActivity(projectId: number, page = 1) {
   return useQuery({
     queryKey: ['project-activity', projectId, page],

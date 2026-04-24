@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { getErrorMessage } from '@/lib/utils';
 
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -29,7 +30,11 @@ export default function LoginPage() {
       await login(data.username, data.password);
       navigate('/dashboard');
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast({
+        title: 'Error',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      });
     }
   };
 

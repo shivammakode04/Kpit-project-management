@@ -22,7 +22,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async () => {
     try {
       const { data } = await notificationsApi.list();
-      set({ notifications: data.results });
+      set({ notifications: data });
     } catch {
       /* silently fail */
     }
@@ -38,7 +38,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markRead: async (id) => {
-    await notificationsApi.markRead(id);
+    await notificationsApi.markAsRead(id);
     set((state) => ({
       notifications: state.notifications.map((n) =>
         n.id === id ? { ...n, is_read: true } : n
@@ -48,7 +48,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markAllRead: async () => {
-    await notificationsApi.markAllRead();
+    await notificationsApi.markAllAsRead();
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
       unreadCount: 0,

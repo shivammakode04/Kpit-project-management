@@ -34,7 +34,7 @@ export default function StoryViewPage() {
   const [titleDraft, setTitleDraft] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
 
-  const isEditor = user?.role === 'admin' || user?.role === 'editor';
+  const isEditor = user?.role === 'admin' || user?.role === 'member';
 
   const { data: story, isLoading: storyLoad } = useQuery({
     queryKey: ['story', storyId],
@@ -46,8 +46,8 @@ export default function StoryViewPage() {
   const tasks = tasksData?.results ?? [];
 
   const { data: membersData } = useQuery({
-    queryKey: ['project-members', story?.project],
-    queryFn: async () => (await projectsApi.getMembers(story!.project)).data,
+    queryKey: ['project-members', story?.project, 'accepted'],
+    queryFn: async () => (await projectsApi.getMembers(story!.project, 'accepted')).data,
     enabled: !!story?.project,
   });
   const members = membersData?.map((m) => m.user_detail) ?? [];
@@ -226,11 +226,14 @@ function TaskRow({ task, isEditor, currentUserId: _, onCycleStatus, onDelete, on
 
   return (
     <motion.div layout className="glass-card overflow-hidden">
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-start gap-3 p-4">
         <StatusChip status={task.status} onClick={isEditor ? onCycleStatus : undefined} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{task.title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
+          {task.description && (
+            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{task.description}</p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
             <PriorityBadge priority={task.priority} />
             {task.due_date && (
               <span className={cn('text-xs flex items-center gap-1',
@@ -238,10 +241,42 @@ function TaskRow({ task, isEditor, currentUserId: _, onCycleStatus, onDelete, on
                 {overdue ? '⚠ ' : ''}{formatDate(task.due_date)}
               </span>
             )}
-            {task.assigned_to_name && (
-              <Avatar name={task.assigned_to_name} size="sm" />
-            )}
+            <span className="text-xs text-surface-400">
+              Created by {task.created_by_name}
+            </span>
           </div>
+          
+          {/* Show all assigned users */}
+          {(task.assigned_to_details?.length || task.assigned_to_names?.length) > 0 && (
+            <div className="flex items-center gap-1 mt-2">
+              <span className="text-xs text-surface-500">Assigned to:</span>
+              <div className="flex -space-x-2">
+                {(task.assigned_to_details || task.assigned_to_names?.map((name, index) => ({
+                  id: index,
+                  username: name,
+                  full_name: name,
+                  avatar_url: null
+                })) || []).map((user) => (
+                  <div 
+                    key={user.id} 
+                    title={user.full_name || user.username}
+                    className="ring-2 ring-white dark:ring-surface-900 inline-block"
+                  >
+                    <Avatar 
+                      name={user.full_name || user.username} 
+                      src={user.avatar_url || undefined} 
+                      size="sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              {task.assigned_to_details && task.assigned_to_details.length > 3 && (
+                <span className="text-xs text-surface-500 ml-1">
+                  +{task.assigned_to_details.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={onExpand} className="btn-ghost p-1.5 text-xs flex items-center gap-1">

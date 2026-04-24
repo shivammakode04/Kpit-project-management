@@ -1,198 +1,213 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  DndContext, DragOverlay, closestCorners, KeyboardSensor,
-  PointerSensor, useSensor, useSensors,
-  type DragStartEvent, type DragEndEvent,
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { motion } from 'framer-motion';
-import { Calendar, MessageSquare, Paperclip, Star, StarOff, AlertCircle } from 'lucide-react';
-import type { Task } from '@/types';
-import { cn, isOverdue, formatDate } from '@/lib/utils';
-import Avatar from '@/components/ui/Avatar';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { Search, Filter, MoreVertical } from 'lucide-react';
+import { tasksApi } from '@/api/tasks';
+import { storiesApi } from '@/api/stories';
+import type { Task, UserStory } from '@/types';
+import { KanbanColumn } from './KanbanColumn';
+import { KanbanCard } from './KanbanCard';
 
 interface KanbanBoardProps {
-  tasks: Task[];
-  bookmarks: number[];
-  onStatusChange: (taskId: number, status: string) => void;
-  onTaskClick: (task: Task) => void;
-  onBookmark: (taskId: number) => void;
-  readonly?: boolean;
+  projectId: number;
 }
 
-const COLUMNS = [
-  { id: 'todo', title: 'To Do', color: 'bg-surface-400' },
-  { id: 'in_progress', title: 'In Progress', color: 'bg-blue-500' },
-  { id: 'done', title: 'Done', color: 'bg-emerald-500' },
-] as const;
+interface TaskFilters {
+  search: string;
+  priority: string;
+  assignee: string;
+  status: string;
+}
 
-export default function KanbanBoard({
-  tasks, bookmarks, onStatusChange, onTaskClick, onBookmark, readonly = false,
-}: KanbanBoardProps) {
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+export function KanbanBoard({ projectId }: KanbanBoardProps) {
+  const [stories, setStories] = useState<UserStory[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<number | null>(null);
+  const [filters, setFilters] = useState<TaskFilters>({
+    search: '',
+    priority: '',
+    assignee: '',
+    status: '',
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks.find((t) => t.id === event.active.id);
-    if (task) setActiveTask(task);
-  };
+  useEffect(() => {
+    loadData();
+  }, [projectId]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
-    if (!over || readonly) return;
-    const column = COLUMNS.find((c) => c.id === over.id);
-    if (column) {
-      const task = tasks.find((t) => t.id === active.id);
-      if (task && task.status !== column.id) {
-        onStatusChange(task.id, column.id);
-      }
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [storiesRes, tasksRes] = await Promise.all([
+        storiesApi.list(projectId),
+        tasksApi.listByProject(projectId),
+      ]);
+      setStories(storiesRes.data.results ?? storiesRes.data as unknown as UserStory[]);
+      setTasks(tasksRes.data.results ?? tasksRes.data as unknown as Task[]);
+    } catch (error) {
+      console.error('Failed to load kanban data', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {COLUMNS.map((column) => {
-          const columnTasks = tasks.filter((t) => t.status === column.id);
-          return (
-            <KanbanColumn key={column.id} column={column} tasks={columnTasks} bookmarks={bookmarks}
-              onBookmark={onBookmark} onTaskClick={onTaskClick} readonly={readonly} />
-          );
-        })}
-      </div>
-      <DragOverlay>
-        {activeTask && (
-          <TaskCard task={activeTask} isBookmarked={bookmarks.includes(activeTask.id)} isDragOverlay />
-        )}
-      </DragOverlay>
-    </DndContext>
-  );
-}
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-function KanbanColumn({
-  column, tasks, bookmarks, onBookmark, onTaskClick, readonly,
-}: {
-  column: typeof COLUMNS[number];
-  tasks: Task[];
-  bookmarks: number[];
-  onBookmark: (id: number) => void;
-  onTaskClick: (task: Task) => void;
-  readonly: boolean;
-}) {
-  const { setNodeRef } = useSortable({ id: column.id });
+    if (!over || active.id === over.id) return;
+
+    const taskId = parseInt(active.id as string);
+    const newStatus = over.id as string;
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    setUpdating(taskId);
+
+    try {
+      await tasksApi.updateStatus(taskId, newStatus as any);
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, status: newStatus as any } : t
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update task status', error);
+      loadData();
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const getTasksByStatus = (status: string) => {
+    return tasks.filter((t) => t.status === status);
+  };
+
+  const getFilteredTasks = () => {
+    return tasks.filter((task) => {
+      if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+      if (filters.priority && task.priority !== filters.priority) {
+        return false;
+      }
+      if (filters.status && task.status !== filters.status) {
+        return false;
+      }
+      if (filters.assignee && !task.assigned_to_details?.some(user => user.id.toString() === filters.assignee)) {
+        return false;
+      }
+      return true;
+    });
+  };
+
+  const columns = [
+    { id: 'todo', title: 'To Do', color: 'bg-gray-100' },
+    { id: 'in_progress', title: 'In Progress', color: 'bg-blue-100' },
+    { id: 'done', title: 'Done', color: 'bg-green-100' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-gray-500">Loading kanban board...</p>
+      </div>
+    );
+  }
 
   return (
-    <div ref={setNodeRef} className="flex flex-col rounded-2xl bg-surface-100/50 dark:bg-surface-800/30 p-3 min-h-[300px]">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <div className={cn('w-2.5 h-2.5 rounded-full', column.color)} />
-        <h3 className="font-semibold text-sm">{column.title}</h3>
-        <span className="ml-auto text-xs text-surface-500 font-medium bg-surface-200 dark:bg-surface-700 px-2 py-0.5 rounded-full">
-          {tasks.length}
-        </span>
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="bg-white dark:bg-surface-800 p-4 rounded-xl border border-surface-200 dark:border-surface-800">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-64">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                className="w-full pl-10 pr-4 py-2 border border-surface-200 dark:border-surface-700 rounded-lg bg-white dark:bg-surface-800"
+              />
+            </div>
+          </div>
+          
+          <select
+            value={filters.priority}
+            onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+            className="px-3 py-2 border border-surface-200 dark:border-surface-700 rounded-lg bg-white dark:bg-surface-800"
+          >
+            <option value="">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+          
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+            className="px-3 py-2 border border-surface-200 dark:border-surface-700 rounded-lg bg-white dark:bg-surface-800"
+          >
+            <option value="">All Status</option>
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
       </div>
-      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 space-y-2">
-          {tasks.map((task) => (
-            <SortableTaskCard key={task.id} task={task} isBookmarked={bookmarks.includes(task.id)}
-              onBookmark={onBookmark} onClick={() => onTaskClick(task)} readonly={readonly} />
+
+      {/* Kanban Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              id={column.id}
+              title={column.title}
+              color={column.color}
+              count={getFilteredTasks().filter(t => t.status === column.id).length}
+            >
+              <SortableContext
+                items={getFilteredTasks().filter(t => t.status === column.id).map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {getFilteredTasks().filter(t => t.status === column.id).map((task) => (
+                    <KanbanCard
+                      key={task.id}
+                      task={task}
+                      isUpdating={updating === task.id}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </KanbanColumn>
           ))}
         </div>
-      </SortableContext>
+      </DndContext>
     </div>
-  );
-}
-
-function SortableTaskCard({
-  task, isBookmarked, onBookmark, onClick, readonly,
-}: {
-  task: Task; isBookmarked: boolean; onBookmark: (id: number) => void; onClick: () => void; readonly: boolean;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id, disabled: readonly,
-  });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} isBookmarked={isBookmarked} onBookmark={onBookmark} onClick={onClick} />
-    </div>
-  );
-}
-
-function TaskCard({
-  task, isBookmarked, onBookmark, onClick, isDragOverlay,
-}: {
-  task: Task; isBookmarked: boolean; onBookmark?: (id: number) => void;
-  onClick?: () => void; isDragOverlay?: boolean;
-}) {
-  const overdue = isOverdue(task.due_date) && task.status !== 'done';
-
-  return (
-    <motion.div
-      layout={!isDragOverlay}
-      className={cn(
-        'glass-card p-3.5 cursor-pointer hover:shadow-md transition-shadow group',
-        isDragOverlay && 'shadow-xl rotate-1 scale-105',
-        overdue && 'ring-1 ring-danger/30',
-      )}
-      onClick={onClick}
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="text-sm font-medium leading-snug flex-1">{task.title}</h4>
-        {onBookmark && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onBookmark(task.id); }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-          >
-            {isBookmarked
-              ? <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              : <StarOff className="w-3.5 h-3.5 text-surface-400" />}
-          </button>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
-          task.priority === 'high' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-          task.priority === 'medium' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-          task.priority === 'low' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-        )}>
-          {task.priority}
-        </span>
-
-        {task.due_date && (
-          <span className={cn('flex items-center gap-1 text-[10px]',
-            overdue ? 'text-danger font-medium' : 'text-surface-500')}>
-            {overdue && <AlertCircle className="w-3 h-3" />}
-            <Calendar className="w-3 h-3" />
-            {formatDate(task.due_date)}
-          </span>
-        )}
-
-        {task.comment_count > 0 && (
-          <span className="flex items-center gap-0.5 text-[10px] text-surface-500">
-            <MessageSquare className="w-3 h-3" />{task.comment_count}
-          </span>
-        )}
-        {task.attachment_count > 0 && (
-          <span className="flex items-center gap-0.5 text-[10px] text-surface-500">
-            <Paperclip className="w-3 h-3" />{task.attachment_count}
-          </span>
-        )}
-      </div>
-
-      {task.assigned_to_name && (
-        <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-surface-100 dark:border-surface-800">
-          <Avatar name={task.assigned_to_name} size="sm" />
-          <span className="text-xs text-surface-500 truncate">{task.assigned_to_name}</span>
-        </div>
-      )}
-    </motion.div>
   );
 }
