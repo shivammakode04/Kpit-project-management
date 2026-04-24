@@ -133,7 +133,7 @@ export default function ProjectPage() {
                   onNavigate={() => navigate(`/stories/${s.id}`)} />
               ))}
             </div>
-            {isAdmin && (
+            {(isAdmin || user?.role === 'member') && (
               <div className="p-3 border-t border-surface-200 dark:border-surface-800">
                 <button onClick={() => setShowCreateStory(true)} className="btn-ghost w-full text-sm gap-2"><Plus className="w-4 h-4" />Add Story</button>
               </div>

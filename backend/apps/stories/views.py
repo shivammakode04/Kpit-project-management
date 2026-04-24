@@ -32,10 +32,10 @@ class StoryListCreateView(generics.ListCreateAPIView):
         project_id = self.kwargs['project_id']
         project = get_object_or_404(Project, pk=project_id)
 
-        # Check admin role only
-        if request.user.role != 'admin':
+        # Check admin or member role
+        if request.user.role not in ['admin', 'member']:
             return Response(
-                {'detail': 'Only admins can create stories.'},
+                {'detail': 'Only admins and members can create stories.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -76,12 +76,25 @@ class StoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         story = self.get_object()
-        # Check admin permission only
-        if request.user.role != 'admin':
+        
+        # Admins can edit any story, members can only edit their own stories
+        if request.user.role == 'admin':
+            # Admin can edit any story
+            pass
+        elif request.user.role == 'member':
+            # Members can only edit stories they created
+            if story.created_by != request.user:
+                return Response(
+                    {'detail': 'Members can only edit stories they created.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        else:
+            # Viewers cannot edit stories
             return Response(
-                {'detail': 'Only admins can update stories.'},
+                {'detail': 'Only admins and members can update stories.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
@@ -93,11 +106,25 @@ class StoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         story = self.get_object()
-        if request.user.role != 'admin':
+        
+        # Admins can delete any story, members can only delete their own stories
+        if request.user.role == 'admin':
+            # Admin can delete any story
+            pass
+        elif request.user.role == 'member':
+            # Members can only delete stories they created
+            if story.created_by != request.user:
+                return Response(
+                    {'detail': 'Members can only delete stories they created.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        else:
+            # Viewers cannot delete stories
             return Response(
-                {'detail': 'Only admins can delete stories.'},
+                {'detail': 'Only admins and members can delete stories.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        
         log_activity(
             request.user.id, story.project_id,
             'deleted story', 'story', story.id,

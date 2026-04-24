@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export function TeamPage() {
+export default function TeamPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);

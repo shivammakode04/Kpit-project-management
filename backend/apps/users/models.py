@@ -20,7 +20,7 @@ class CustomUser(AbstractUser):
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
-        default=Role.VIEWER,
+        default=Role.MEMBER,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
