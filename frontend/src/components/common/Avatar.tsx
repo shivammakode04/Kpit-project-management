@@ -1,6 +1,6 @@
 import { cn, getAvatarColor, getInitials } from '@/lib/utils';
 
-type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface AvatarProps {
   name: string;
@@ -10,6 +10,7 @@ interface AvatarProps {
 }
 
 const sizeMap: Record<AvatarSize, string> = {
+  xs: 'w-5 h-5 text-[8px]',
   sm: 'w-6 h-6 text-[9px]',
   md: 'w-8 h-8 text-[11px]',
   lg: 'w-10 h-10 text-sm',

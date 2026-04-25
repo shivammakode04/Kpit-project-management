@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Check, X, Paperclip, MessageSquare, Clock } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Paperclip, MessageSquare, Clock, BookOpen, ChevronLeft, Send } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
@@ -75,8 +75,12 @@ export default function StoryViewPage() {
     setEditingTitle(false);
   };
 
+  // Task stats
+  const doneTasks = tasks.filter(t => t.status === 'done').length;
+  const taskProgress = tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : 0;
+
   if (storyLoad) return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <Skeleton className="h-8 w-1/2" />
       <Skeleton className="h-4 w-full" />
       <TableRowSkeleton rows={4} />
@@ -87,9 +91,21 @@ export default function StoryViewPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Back link */}
+      <Link
+        to={`/projects/${story.project}`}
+        className="inline-flex items-center gap-1.5 text-sm text-surface-500 hover:text-brand-600 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Back to project
+      </Link>
+
       {/* Story Header */}
-      <div className="glass-card p-6">
-        <div className="flex items-start gap-3">
+      <div className="glass-card p-6 gradient-card">
+        <div className="flex items-start gap-4">
+          <div className="w-11 h-11 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-violet-500/20">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
           <div className="flex-1 min-w-0">
             {editingTitle ? (
               <div className="flex items-center gap-2">
@@ -100,41 +116,66 @@ export default function StoryViewPage() {
                   className="input-field text-lg font-bold flex-1"
                   autoFocus
                 />
-                <button onClick={handleSaveTitle} className="btn-primary p-1.5"><Check className="w-4 h-4" /></button>
-                <button onClick={() => setEditingTitle(false)} className="btn-ghost p-1.5"><X className="w-4 h-4" /></button>
+                <button onClick={handleSaveTitle} className="btn-primary p-2"><Check className="w-4 h-4" /></button>
+                <button onClick={() => setEditingTitle(false)} className="btn-ghost p-2"><X className="w-4 h-4" /></button>
               </div>
             ) : (
               <h1
-                className={cn('text-xl font-bold', isEditor && 'cursor-pointer hover:text-brand-600 transition-colors')}
+                className={cn('text-xl font-bold', isEditor && 'cursor-pointer hover:text-brand-600 transition-colors group')}
                 onClick={() => { if (isEditor) { setTitleDraft(story.title); setEditingTitle(true); } }}
               >
                 {story.title}
-                {isEditor && <Edit2 className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100" />}
+                {isEditor && <Edit2 className="w-3.5 h-3.5 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h1>
             )}
-            {story.description && <p className="text-surface-500 text-sm mt-2">{story.description}</p>}
+            {story.description && <p className="text-surface-500 text-sm mt-2 leading-relaxed">{story.description}</p>}
+
+            {/* Meta row */}
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              <PriorityBadge priority={story.priority} />
+              <StatusChip status={story.status} />
+              <span className="text-xs text-surface-400">Created by {story.created_by_name}</span>
+              <span className="text-xs text-surface-400">·</span>
+              <span className="text-xs text-surface-400">{timeAgo(story.created_at)}</span>
+            </div>
+
+            {/* Progress bar */}
+            {tasks.length > 0 && (
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex-1 h-1.5 bg-surface-100 dark:bg-surface-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${taskProgress}%` }}
+                    transition={{ duration: 0.8 }}
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                  />
+                </div>
+                <span className="text-xs font-semibold text-surface-500">{doneTasks}/{tasks.length}</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <PriorityBadge priority={story.priority} />
-            <StatusChip status={story.status} />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 mt-3 text-xs text-surface-500">
-          <span>Created by {story.created_by_name}</span>
-          <span>·</span>
-          <span>{timeAgo(story.created_at)}</span>
-          <span>·</span>
-          <span>{story.task_count} task{story.task_count !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface-100 dark:bg-surface-800 rounded-xl w-fit">
-        {(['tasks', 'comments', 'activity'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={cn(
-            'px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize',
-            tab === t ? 'bg-white dark:bg-surface-700 shadow-sm' : 'text-surface-500 hover:text-surface-700',
-          )}>{t}</button>
+        {([
+          { key: 'tasks' as const, label: 'Tasks', count: tasks.length },
+          { key: 'comments' as const, label: 'Comments' },
+          { key: 'activity' as const, label: 'Activity' },
+        ]).map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={cn(
+            'px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2',
+            tab === t.key ? 'bg-white dark:bg-surface-700 shadow-sm' : 'text-surface-500 hover:text-surface-700',
+          )}>
+            {t.label}
+            {t.count !== undefined && (
+              <span className={cn(
+                'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+                tab === t.key ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'bg-surface-200 dark:bg-surface-700 text-surface-500'
+              )}>{t.count}</span>
+            )}
+          </button>
         ))}
       </div>
 
@@ -148,10 +189,11 @@ export default function StoryViewPage() {
           )}
           {tasksLoad ? <TableRowSkeleton /> : tasks.length === 0 ? (
             <EmptyState icon={<Plus className="w-6 h-6" />} title="No tasks yet" description="Break this story into tasks" />
-          ) : tasks.map((task) => (
+          ) : tasks.map((task, i) => (
             <TaskRow
               key={task.id}
               task={task}
+              index={i}
               isEditor={isEditor}
               currentUserId={user?.id}
               onCycleStatus={() => handleCycleStatus(task)}
@@ -174,17 +216,23 @@ export default function StoryViewPage() {
 
       {/* Activity Tab */}
       {tab === 'activity' && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {activityData?.results.length === 0 ? (
             <EmptyState icon={<Clock className="w-6 h-6" />} title="No activity yet" />
-          ) : activityData?.results.map((log) => (
-            <div key={log.id} className="flex items-start gap-3 glass-card p-3">
+          ) : activityData?.results.map((log, i) => (
+            <motion.div
+              key={log.id}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.03 }}
+              className="flex items-start gap-3 glass-card p-3"
+            >
               <Avatar name={log.user_name} size="sm" />
               <div>
                 <p className="text-sm"><span className="font-medium">{log.user_name}</span> {log.action}</p>
                 <p className="text-xs text-surface-400">{timeAgo(log.created_at)}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -202,8 +250,8 @@ export default function StoryViewPage() {
   );
 }
 
-function TaskRow({ task, isEditor, currentUserId: _, onCycleStatus, onDelete, onExpand, expanded, storyId }: {
-  task: Task; isEditor: boolean; currentUserId?: number; onCycleStatus: () => void;
+function TaskRow({ task, index, isEditor, currentUserId: _, onCycleStatus, onDelete, onExpand, expanded, storyId }: {
+  task: Task; index: number; isEditor: boolean; currentUserId?: number; onCycleStatus: () => void;
   onDelete: () => void; onExpand: () => void; expanded: boolean; storyId: number;
 }) {
   const overdue = isOverdue(task.due_date) && task.status !== 'done';
@@ -224,62 +272,60 @@ function TaskRow({ task, isEditor, currentUserId: _, onCycleStatus, onDelete, on
     e.target.value = '';
   };
 
+  const assignees = task.assigned_to_details || task.assigned_to_names?.map((name, i) => ({
+    id: i, username: name, full_name: name, avatar_url: null,
+  })) || [];
+
   return (
-    <motion.div layout className="glass-card overflow-hidden">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+      className="glass-card overflow-hidden"
+    >
       <div className="flex items-start gap-3 p-4">
         <StatusChip status={task.status} onClick={isEditor ? onCycleStatus : undefined} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{task.title}</p>
+          <p className="text-sm font-medium">{task.title}</p>
           {task.description && (
-            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{task.description}</p>
+            <p className="text-xs text-surface-500 mt-1 line-clamp-2 leading-relaxed">{task.description}</p>
           )}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2.5">
             <PriorityBadge priority={task.priority} />
             {task.due_date && (
-              <span className={cn('text-xs flex items-center gap-1',
-                overdue ? 'text-danger font-medium' : dueToday ? 'text-warning' : 'text-surface-400')}>
-                {overdue ? '⚠ ' : ''}{formatDate(task.due_date)}
+              <span className={cn('text-xs flex items-center gap-1 px-2 py-0.5 rounded-full',
+                overdue ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-medium' :
+                dueToday ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' :
+                'bg-surface-100 text-surface-500 dark:bg-surface-800')}>
+                {formatDate(task.due_date)}
               </span>
             )}
-            <span className="text-xs text-surface-400">
-              Created by {task.created_by_name}
-            </span>
+            <span className="text-xs text-surface-400">by {task.created_by_name}</span>
           </div>
           
-          {/* Show all assigned users */}
-          {(task.assigned_to_details?.length || task.assigned_to_names?.length) > 0 && (
-            <div className="flex items-center gap-1 mt-2">
-              <span className="text-xs text-surface-500">Assigned to:</span>
-              <div className="flex -space-x-2">
-                {(task.assigned_to_details || task.assigned_to_names?.map((name, index) => ({
-                  id: index,
-                  username: name,
-                  full_name: name,
-                  avatar_url: null
-                })) || []).map((user) => (
-                  <div 
-                    key={user.id} 
-                    title={user.full_name || user.username}
-                    className="ring-2 ring-white dark:ring-surface-900 inline-block"
-                  >
-                    <Avatar 
-                      name={user.full_name || user.username} 
-                      src={user.avatar_url || undefined} 
-                      size="sm"
-                    />
+          {/* Assigned users */}
+          {assignees.length > 0 && (
+            <div className="flex items-center gap-2 mt-2.5">
+              <span className="text-[10px] text-surface-400 font-medium uppercase tracking-wider">Assigned</span>
+              <div className="flex -space-x-1.5">
+                {assignees.slice(0, 4).map((u) => (
+                  <div key={u.id} title={u.full_name || u.username} className="ring-2 ring-white dark:ring-surface-900">
+                    <Avatar name={u.full_name || u.username} src={u.avatar_url || undefined} size="xs" />
                   </div>
                 ))}
+                {assignees.length > 4 && (
+                  <span className="text-[10px] text-surface-500 ml-2">+{assignees.length - 4} more</span>
+                )}
               </div>
-              {task.assigned_to_details && task.assigned_to_details.length > 3 && (
-                <span className="text-xs text-surface-500 ml-1">
-                  +{task.assigned_to_details.length - 3} more
-                </span>
-              )}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onExpand} className="btn-ghost p-1.5 text-xs flex items-center gap-1">
+          <button onClick={onExpand} className={cn(
+            'btn-ghost p-1.5 text-xs flex items-center gap-1',
+            expanded && 'bg-brand-50 text-brand-600 dark:bg-brand-900/20',
+          )}>
             <MessageSquare className="w-3.5 h-3.5" />{task.comment_count}
           </button>
           <button onClick={() => fileRef.current?.click()} className="btn-ghost p-1.5 text-xs flex items-center gap-1">
@@ -298,11 +344,11 @@ function TaskRow({ task, isEditor, currentUserId: _, onCycleStatus, onDelete, on
               <CommentsPanel taskId={task.id} currentUserId={undefined} />
               {attachments && attachments.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-surface-500 mb-2">Attachments</p>
+                  <p className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">Attachments</p>
                   <div className="space-y-1">
                     {(attachments as TaskAttachment[]).map((a) => (
                       <a key={a.id} href={a.file} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-2 text-xs text-brand-600 hover:underline">
+                        className="flex items-center gap-2 text-xs text-brand-600 hover:underline p-1.5 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/10 transition-colors">
                         <Paperclip className="w-3 h-3" />{a.filename} ({formatFileSize(a.file_size)})
                       </a>
                     ))}
@@ -336,16 +382,16 @@ function CommentsPanel({ taskId, currentUserId }: { taskId: number; currentUserI
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-surface-500">Comments</p>
+      <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider">Comments</p>
       {isLoading ? <Skeleton className="h-10 w-full" /> : comments.length === 0 ? (
-        <p className="text-xs text-surface-400">No comments yet</p>
+        <p className="text-xs text-surface-400 italic">No comments yet</p>
       ) : comments.map((c) => (
-        <div key={c.id} className="flex items-start gap-2">
+        <div key={c.id} className="flex items-start gap-2.5">
           <Avatar name={c.user_name} size="sm" />
           <div className="flex-1 min-w-0">
-            <div className="bg-surface-50 dark:bg-surface-800 rounded-xl px-3 py-2">
+            <div className="bg-surface-50 dark:bg-surface-800 rounded-xl px-3.5 py-2.5">
               <p className="text-xs font-semibold">{c.user_name}</p>
-              <p className="text-sm mt-0.5">{c.content}</p>
+              <p className="text-sm mt-0.5 leading-relaxed">{c.content}</p>
             </div>
             <p className="text-[10px] text-surface-400 mt-1 ml-1">{timeAgo(c.created_at)}</p>
           </div>
@@ -358,7 +404,10 @@ function CommentsPanel({ taskId, currentUserId }: { taskId: number; currentUserI
       ))}
       <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
         <input {...register('content')} placeholder="Add a comment..." className="input-field text-sm flex-1 py-2" />
-        <button type="submit" disabled={addComment.isPending} className="btn-primary py-2 px-3 text-sm">Post</button>
+        <button type="submit" disabled={addComment.isPending} className="btn-primary py-2 px-3 text-sm">
+          <Send className="w-3.5 h-3.5" />
+          Post
+        </button>
       </form>
     </div>
   );

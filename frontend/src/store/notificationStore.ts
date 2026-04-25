@@ -31,7 +31,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
     fetchNotifications: async () => {
       try {
         const { data } = await notificationsApi.list();
-        set({ notifications: data });
+        set({ notifications: data.results ?? data });
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
       }

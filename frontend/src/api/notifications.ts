@@ -3,7 +3,7 @@ import type { Notification, PaginatedResponse } from '@/types';
 
 export const notificationsApi = {
   list: () =>
-    api.get<Notification[]>('/notifications/'),
+    api.get<PaginatedResponse<Notification>>('/notifications/'),
 
   get: (id: number) =>
     api.get<Notification>(`/notifications/${id}/`),

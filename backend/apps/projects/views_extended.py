@@ -72,7 +72,7 @@ class ProjectTasksView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsProjectMember]
 
     def get_queryset(self):
-        return Task.objects.filter(story__project=self.kwargs['pk']).select_related('story', 'assigned_to', 'created_by')
+        return Task.objects.filter(story__project=self.kwargs['pk']).select_related('story', 'created_by').prefetch_related('assigned_to')
 
 
 class ProjectUsersDirectoryView(APIView):
