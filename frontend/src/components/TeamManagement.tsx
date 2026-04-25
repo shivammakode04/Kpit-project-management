@@ -71,10 +71,16 @@ export function TeamManagement({ projectId }: TeamManagementProps) {
       setInvitedUsers(new Set([...invitedUsers, userId]));
       toast({
         title: 'Success',
-        description: 'Invitation sent successfully',
+        description: 'Invitation sent successfully! The user will receive a notification.',
       });
       // Refresh data to remove invited user from all users list
       loadData();
+      
+      // Force refresh notifications after a short delay
+      setTimeout(() => {
+        // Trigger notification refresh if available
+        window.dispatchEvent(new CustomEvent('refreshNotifications'));
+      }, 1000);
     } catch (error) {
       toast({
         title: 'Error',

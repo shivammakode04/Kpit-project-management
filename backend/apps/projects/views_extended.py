@@ -18,13 +18,53 @@ from apps.stories.serializers import UserStorySerializer
 from apps.tasks.serializers import TaskSerializer
 
 
-class ProjectStoriesView(generics.ListAPIView):
-    """List stories for a project."""
+class ProjectStoriesView(generics.ListCreateAPIView):
+    """List and create stories for a project."""
     serializer_class = UserStorySerializer
     permission_classes = [IsAuthenticated, IsProjectMember]
 
     def get_queryset(self):
         return UserStory.objects.filter(project=self.kwargs['pk']).select_related('created_by')
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            from apps.stories.serializers import UserStoryCreateSerializer
+            return UserStoryCreateSerializer
+        return UserStorySerializer
+    
+    def create(self, request, *args, **kwargs):
+        project_id = self.kwargs['pk']
+        project = get_object_or_404(Project, pk=project_id)
+
+        # Check admin or member role
+        if request.user.role not in ['admin', 'member']:
+            return Response(
+                {'detail': 'Only admins and members can create stories.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Also check project membership with accepted status
+        membership = ProjectMember.objects.filter(
+            project=project, user=request.user, status='accepted'
+        ).first()
+        if not membership:
+            return Response(
+                {'detail': 'Not an accepted project member.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        story = serializer.save(project=project, created_by=request.user)
+
+        log_activity(
+            request.user.id, project.id,
+            'created story', 'story', story.id,
+        )
+        return Response(
+            UserStorySerializer(story).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 class ProjectTasksView(generics.ListAPIView):
     """List tasks for a project."""

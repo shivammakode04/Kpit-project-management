@@ -12,6 +12,8 @@ class Notification(models.Model):
         ('story_assigned', 'Story Assigned'),
         ('story_updated', 'Story Updated'),
         ('project_invite', 'Project Invite'),
+        ('team_invitation', 'Team Invitation'),
+        ('team_invitation_accepted', 'Team Invitation Accepted'),
         ('deadline_reminder', 'Deadline Reminder'),
         ('comment_added', 'Comment Added'),
         ('project_updated', 'Project Updated'),

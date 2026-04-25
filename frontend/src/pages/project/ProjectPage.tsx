@@ -97,9 +97,9 @@ export default function ProjectPage() {
   const breadcrumbs = useProjectBreadcrumbs(projectId);
 
   return (
-    <div className="-m-4 md:-m-6 lg:-m-8 flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="-m-4 md:-m-6 lg:-m-8 flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-50">
       {/* Breadcrumbs */}
-      <div className="bg-white dark:bg-surface-800 border-b border-surface-200 dark:border-surface-800">
+      <div className="absolute top-0 left-0 right-0 bg-white border-b border-slate-200 z-10">
         <div className="px-6 py-3">
           <Breadcrumbs {...breadcrumbs} />
         </div>
@@ -107,61 +107,106 @@ export default function ProjectPage() {
 
       <AnimatePresence initial={false}>
         {panelOpen && (
-          <motion.aside initial={{ width: 0 }} animate={{ width: 260 }} exit={{ width: 0 }} transition={{ duration: 0.25 }}
-            className="shrink-0 border-r border-surface-200 dark:border-surface-800 flex flex-col bg-white dark:bg-surface-900 overflow-hidden">
-            <div className="p-4 border-b border-surface-200 dark:border-surface-800">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold truncate text-sm">{project?.name}</h2>
-                {isAdmin && (
-                  <button onClick={() => archiveMutation.mutate(projectId)} className="btn-ghost p-1" title="Archive/Restore">
-                    {project?.is_archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                  </button>
-                )}
+          <motion.aside initial={{ width: 0 }} animate={{ width: 280 }} exit={{ width: 0 }} transition={{ duration: 0.25 }}
+            className="shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-hidden mt-16 shadow-sm">
+            
+            {/* Project Header */}
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold text-slate-900 mb-1">{project?.name}</h1>
+                  {isAdmin && (
+                    <button onClick={() => archiveMutation.mutate(projectId)} className="p-1 text-slate-400 hover:text-slate-600 transition-colors" title="Archive/Restore">
+                      {project?.is_archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
               </div>
-              {project?.description && <p className="text-xs text-surface-500 mt-1 line-clamp-2">{project.description}</p>}
+              {project?.description && (
+                <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
+              )}
             </div>
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-surface-400 px-2 py-2">Stories</p>
-              {storiesLoad ? (
-                <div className="space-y-2 px-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}</div>
-              ) : stories.length === 0 ? (
-                <p className="text-xs text-surface-500 px-2">No stories yet</p>
-              ) : stories.map((s: UserStory) => (
-                <StoryRow key={s.id} story={s} expanded={expanded.has(s.id)}
-                  onToggle={() => setExpanded((prev) => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; })}
-                  tasks={allTasks.filter((t) => t.story === s.id)}
-                  onNavigate={() => navigate(`/stories/${s.id}`)} />
-              ))}
-            </div>
-            {(isAdmin || user?.role === 'member') && (
-              <div className="p-3 border-t border-surface-200 dark:border-surface-800">
-                <button onClick={() => setShowCreateStory(true)} className="btn-ghost w-full text-sm gap-2"><Plus className="w-4 h-4" />Add Story</button>
+
+            {/* Stories Section */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+                <div className="p-4 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">STORIES</h2>
+                    {(isAdmin || user?.role === 'member') && (
+                      <button 
+                        onClick={() => setShowCreateStory(true)} 
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-md hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Story
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="p-4">
+                  {storiesLoad ? (
+                    <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}</div>
+                  ) : stories.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Plus className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <h3 className="text-sm font-medium text-slate-900 mb-1">No stories found</h3>
+                      <p className="text-xs text-slate-500 mb-4">Create your first story to get started</p>
+                      {(isAdmin || user?.role === 'member') && (
+                        <button 
+                          onClick={() => setShowCreateStory(true)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Create Story
+                        </button>
+                      )}
+                    </div>
+                  ) : stories.map((s: UserStory) => (
+                    <StoryRow key={s.id} story={s} expanded={expanded.has(s.id)}
+                      onToggle={() => setExpanded((prev) => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; })}
+                      tasks={allTasks.filter((t) => t.story === s.id)}
+                      onNavigate={() => navigate(`/stories/${s.id}`)} />
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
           </motion.aside>
         )}
       </AnimatePresence>
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto scrollbar-thin bg-surface-50 dark:bg-surface-900">
-            <div className="p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-                    <input
-                      type="text"
-                      placeholder="Search tasks..."
-                      value={filters.search}
-                      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2 border border-surface-200 dark:border-surface-700 rounded-lg bg-white dark:bg-surface-800"
-                    />
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6">
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden mt-16">
+        <div className="h-full overflow-y-auto bg-slate-50">
+          <div className="p-6">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Tasks Section */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+              <div className="p-4 border-b border-slate-100">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">TASKS</h2>
+              </div>
+              
+              <div className="p-6">
                 {project?.is_archived && (
-                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl text-sm font-medium">
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm font-medium">
                     ⚠ This project is archived.
                   </div>
                 )}
@@ -175,16 +220,31 @@ export default function ProjectPage() {
                     ))}
                   </div>
                 ) : filtered.length === 0 && !tasksLoad ? (
-                  <EmptyState icon={<Plus className="w-6 h-6" />} title="No tasks yet" description="Create a task to get started" />
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Plus className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-900 mb-2">No tasks found</h3>
+                    <p className="text-slate-500 mb-6">Create stories first, then break them down into tasks</p>
+                    {(isAdmin || user?.role === 'member') && stories.length > 0 && (
+                      <button 
+                        onClick={() => setShowCreateTask(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create Task
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <KanbanBoard projectId={projectId} />
                 )}
               </div>
             </div>
           </div>
-        </main>
+        </div>
+      </main>
 
-      
       <CreateStoryModal open={showCreateStory} onClose={() => setShowCreateStory(false)} projectId={projectId} />
       <CreateTaskModal open={showCreateTask} onClose={() => setShowCreateTask(false)} storyId={stories[0]?.id ?? 0} projectId={projectId} members={acceptedMemberUsers} />
     </div>
@@ -193,17 +253,27 @@ export default function ProjectPage() {
 
 function StoryRow({ story, expanded, onToggle, tasks, onNavigate }: { story: UserStory; expanded: boolean; onToggle: () => void; tasks: Task[]; onNavigate: () => void; }) {
   return (
-    <div className="mb-0.5">
-      <div className="flex items-center gap-1 px-1 py-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800">
+    <div className="mb-1">
+      <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
         <button onClick={onToggle} className="p-0.5 shrink-0">
-          <ChevronRight className={cn('w-3.5 h-3.5 text-surface-400 transition-transform', expanded && 'rotate-90')} />
+          <ChevronRight className={cn('w-3.5 h-3.5 text-slate-400 transition-transform', expanded && 'rotate-90')} />
         </button>
-        <button onClick={onNavigate} className="flex-1 text-left text-sm truncate">{story.title}</button>
-        <span className="text-[10px] text-surface-500 bg-surface-200 dark:bg-surface-700 px-1.5 rounded-full shrink-0">{story.task_count}</span>
+        <button onClick={onNavigate} className="flex-1 text-left text-sm font-medium text-slate-700 truncate group-hover:text-indigo-600 transition-colors">
+          {story.title}
+        </button>
+        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 font-medium">
+          {story.task_count}
+        </span>
       </div>
-      {expanded && tasks.map((t) => (
-        <p key={t.id} className="text-xs pl-8 pr-2 py-0.5 text-surface-500 truncate">{t.title}</p>
-      ))}
+      {expanded && (
+        <div className="ml-6 space-y-1">
+          {tasks.map((t) => (
+            <p key={t.id} className="text-xs text-slate-500 py-1 px-2 truncate hover:text-slate-700 transition-colors">
+              {t.title}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -303,15 +373,28 @@ function ProjectMembersPanel({ projectId, members, isAdmin }: { projectId: numbe
 
 function ProjectSkeleton() {
   return (
-    <div className="flex gap-6 p-6 -m-4 md:-m-6 lg:-m-8">
-      <div className="w-64 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}</div>
-      <div className="flex-1 grid grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="h-6 w-24" />
-            {Array.from({ length: 3 }).map((__, j) => <KanbanCardSkeleton key={j} />)}
+    <div className="flex gap-6 p-6 -m-4 md:-m-6 lg:-m-8 bg-slate-50 h-screen">
+      <div className="w-80 bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+        <div className="space-y-3">
+          <Skeleton className="h-6 w-3/4 rounded-lg" />
+          <Skeleton className="h-4 w-full rounded-lg" />
+          <div className="space-y-2 mt-6">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}
           </div>
-        ))}
+        </div>
+      </div>
+      <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+        <div className="mb-6">
+          <Skeleton className="h-10 w-80 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-6 w-24" />
+              {Array.from({ length: 3 }).map((__, j) => <KanbanCardSkeleton key={j} />)}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

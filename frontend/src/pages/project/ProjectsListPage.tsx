@@ -31,19 +31,19 @@ export default function ProjectsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
+        <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <Plus className="w-4 h-4" /> New Project
         </button>
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search projects..."
-          className="input-field pl-9"
+          className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
         />
       </div>
 
@@ -61,7 +61,7 @@ export default function ProjectsListPage() {
           description={search ? 'Try a different search term' : 'Create your first project to get started'}
           action={
             !search ? (
-              <button onClick={() => setShowCreate(true)} className="btn-primary">
+              <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <Plus className="w-4 h-4" /> New Project
               </button>
             ) : undefined

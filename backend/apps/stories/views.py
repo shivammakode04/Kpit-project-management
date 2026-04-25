@@ -39,13 +39,13 @@ class StoryListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Also check project membership
+        # Also check project membership with accepted status
         membership = ProjectMember.objects.filter(
-            project=project, user=request.user
+            project=project, user=request.user, status='accepted'
         ).first()
         if not membership:
             return Response(
-                {'detail': 'Not a project member.'},
+                {'detail': 'Not an accepted project member.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

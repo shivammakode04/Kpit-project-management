@@ -1,0 +1,7 @@
+Name: Alex Miller    | Username: alexmiller   | Email: alexmiller01@gmail.com   | Password: alex1234
+Name: Ryan Scott     | Username: ryanscott    | Email: ryanscott01@gmail.com    | Password: ryan1234
+Name: Leo Martin     | Username: leomartin    | Email: leomartin01@gmail.com    | Password: leo12345
+Name: Jake Wilson    | Username: jakewilson   | Email: jakewilson01@gmail.com   | Password: jake1234
+Name: Noah Clark     | Username: noahclark    | Email: noahclark01@gmail.com    | Password: noah1234
+Name: Eric Adams     | Username: ericadams    | Email: ericadams01@gmail.com    | Password: eric1234
+Name: Sam Turner     | Username: samturner    | Email: samturner01@gmail.com    | Password: sam12345

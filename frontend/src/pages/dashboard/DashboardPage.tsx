@@ -81,7 +81,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card p-5 group hover:shadow-md transition-all duration-300"
+            className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 group hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-center justify-between mb-3">
               <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', stat.bg)}>
@@ -104,7 +104,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card p-6"
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-6"
         >
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <Target className="w-4 h-4 text-brand-500" /> Task Completion
@@ -148,7 +148,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="glass-card p-6 lg:col-span-2"
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 lg:col-span-2"
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="glass-card p-6"
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-6"
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -247,7 +247,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="glass-card p-6"
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-6"
         >
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-4">
             <Activity className="w-4 h-4 text-violet-500" /> Recent Tasks

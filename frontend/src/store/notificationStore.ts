@@ -14,47 +14,65 @@ interface NotificationState {
   closePanel: () => void;
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: [],
-  unreadCount: 0,
-  isOpen: false,
+export const useNotificationStore = create<NotificationState>((set, get) => {
+  // Listen for custom refresh events
+  if (typeof window !== 'undefined') {
+    window.addEventListener('refreshNotifications', () => {
+      get().fetchNotifications();
+      get().fetchUnreadCount();
+    });
+  }
 
-  fetchNotifications: async () => {
-    try {
-      const { data } = await notificationsApi.list();
-      set({ notifications: data });
-    } catch {
-      /* silently fail */
-    }
-  },
+  return {
+    notifications: [],
+    unreadCount: 0,
+    isOpen: false,
 
-  fetchUnreadCount: async () => {
-    try {
-      const { data } = await notificationsApi.getUnreadCount();
-      set({ unreadCount: data.unread_count });
-    } catch {
-      /* silently fail */
-    }
-  },
+    fetchNotifications: async () => {
+      try {
+        const { data } = await notificationsApi.list();
+        set({ notifications: data });
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
+    },
 
-  markRead: async (id) => {
-    await notificationsApi.markAsRead(id);
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, is_read: true } : n
-      ),
-      unreadCount: Math.max(0, state.unreadCount - 1),
-    }));
-  },
+    fetchUnreadCount: async () => {
+      try {
+        const { data } = await notificationsApi.getUnreadCount();
+        set({ unreadCount: data.unread_count });
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    },
 
-  markAllRead: async () => {
-    await notificationsApi.markAllAsRead();
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
-      unreadCount: 0,
-    }));
-  },
+    markRead: async (id) => {
+      try {
+        await notificationsApi.markAsRead(id);
+        set((state) => ({
+          notifications: state.notifications.map((n) =>
+            n.id === id ? { ...n, is_read: true } : n
+          ),
+          unreadCount: Math.max(0, state.unreadCount - 1),
+        }));
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
+    },
 
-  togglePanel: () => set((state) => ({ isOpen: !state.isOpen })),
-  closePanel: () => set({ isOpen: false }),
-}));
+    markAllRead: async () => {
+      try {
+        await notificationsApi.markAllAsRead();
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
+          unreadCount: 0,
+        }));
+      } catch (error) {
+        console.error('Failed to mark all notifications as read:', error);
+      }
+    },
+
+    togglePanel: () => set((state) => ({ isOpen: !state.isOpen })),
+    closePanel: () => set({ isOpen: false }),
+  };
+});

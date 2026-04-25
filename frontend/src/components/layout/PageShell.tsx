@@ -62,14 +62,14 @@ export default function PageShell({ children }: PageShellProps) {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  // Poll notifications every 30s
+  // Poll notifications every 10s
   useEffect(() => {
     fetchUnreadCount();
     fetchNotifications();
     const interval = setInterval(() => {
       fetchUnreadCount();
       fetchNotifications();
-    }, 30000);
+    }, 10000); // Reduced to 10 seconds
     return () => clearInterval(interval);
   }, [fetchUnreadCount, fetchNotifications]);
 
@@ -130,12 +130,15 @@ export default function PageShell({ children }: PageShellProps) {
                 key={path}
                 to={path}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative',
                   active
-                    ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 font-semibold'
+                    ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 font-semibold'
                     : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800',
                 )}
               >
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-full" />
+                )}
                 <Icon className="w-5 h-5 shrink-0" />
                 <AnimatePresence>
                   {sidebarOpen && (
@@ -156,8 +159,8 @@ export default function PageShell({ children }: PageShellProps) {
 
         <div className="p-3 border-t border-surface-200 dark:border-surface-800">
           <button onClick={handleLogout} className={cn(
-            'flex items-center gap-3 px-3 py-2.5 w-full rounded-xl',
-            'text-surface-600 dark:text-surface-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-danger transition-all duration-200',
+            'flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium',
+            'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200',
           )}>
             <LogOut className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span>Logout</span>}
@@ -229,11 +232,11 @@ export default function PageShell({ children }: PageShellProps) {
             </button>
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700 transition-all w-48 md:w-64"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-surface-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-surface-700 transition-all w-48 md:w-64 border border-slate-200 dark:border-surface-700"
             >
               <Search className="w-4 h-4" />
               <span className="text-sm">Search...</span>
-              <kbd className="hidden md:inline ml-auto text-xs bg-surface-200 dark:bg-surface-700 px-1.5 py-0.5 rounded">/</kbd>
+              <kbd className="hidden md:inline ml-auto text-xs bg-slate-200 dark:bg-surface-700 px-1.5 py-0.5 rounded font-mono">/</kbd>
             </button>
           </div>
 
@@ -326,7 +329,7 @@ export default function PageShell({ children }: PageShellProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto scrollbar-thin">
+        <main className="flex-1 overflow-y-auto scrollbar-thin bg-slate-50">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 8 }}
