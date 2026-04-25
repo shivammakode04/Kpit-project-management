@@ -59,11 +59,12 @@ export interface Task {
   title: string;
   description: string;
   status: Status;
-  priority: 'low' | 'medium' | 'high';
-  assigned_to: number | null;
-  assigned_to_name: string | null;
-  assigned_to_names: string[]; // Array of all assigned usernames
-  assigned_to_details?: { // Array of all assigned users with details
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assigned_to: number[];
+  assigned_to_name?: string | null;
+  assigned_to_names?: string[];
+  completed_by?: number[];
+  assigned_to_details?: {
     id: number;
     username: string;
     full_name: string;
@@ -154,4 +155,4 @@ export interface SearchResults {
 }
 
 export type Status = 'todo' | 'in_progress' | 'done' | 'blocked' | 'testing';
-export type Priority = 'low' | 'medium' | 'high';
+export type Priority = 'low' | 'medium' | 'high' | 'critical';

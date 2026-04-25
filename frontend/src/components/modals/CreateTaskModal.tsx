@@ -13,7 +13,6 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().max(2000).optional(),
   priority: z.enum(['low', 'medium', 'high']),
-  assigned_to: z.string().optional(),
   due_date: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -28,23 +27,23 @@ interface CreateTaskModalProps {
 
 export default function CreateTaskModal({ open, onClose, storyId, projectId, members = [] }: CreateTaskModalProps) {
   const { mutateAsync, isPending } = useCreateTask(storyId);
-  const [assignedTo, setAssignedTo] = useState<number | null>(null);
+  const [assignedTo, setAssignedTo] = useState<number[]>([]);
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { priority: 'medium' },
   });
 
-  useEffect(() => { if (!open) reset(); }, [open, reset]);
+  useEffect(() => { if (!open) reset(); setAssignedTo([]); }, [open, reset]);
 
   const onSubmit = async (data: FormValues) => {
     await mutateAsync({
       title: data.title,
       description: data.description,
       priority: data.priority,
-      assigned_to: assignedTo,
+      assigned_to: assignedTo.length > 0 ? assignedTo : [],
       due_date: data.due_date || null,
     });
-    setAssignedTo(null);
+    setAssignedTo([]);
     onClose();
   };
 
@@ -90,25 +89,15 @@ export default function CreateTaskModal({ open, onClose, storyId, projectId, mem
                     <input type="date" {...register('due_date')} className="input-field" />
                   </div>
                 </div>
-                {projectId && (
+                {(projectId || members.length > 0) && (
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Assign To</label>
                     <TaskAssignmentSelect
                       projectId={projectId}
+                      preloadedMembers={members}
                       value={assignedTo}
                       onChange={setAssignedTo}
                     />
-                  </div>
-                )}
-                {!projectId && members.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">Assign To</label>
-                    <select value={assignedTo || ''} onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : null)} className="input-field">
-                      <option value="">Unassigned</option>
-                      {members.map((m) => (
-                        <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
-                      ))}
-                    </select>
                   </div>
                 )}
                 <div className="flex gap-3 pt-2">

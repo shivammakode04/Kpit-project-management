@@ -40,6 +40,12 @@ class Task(models.Model):
         related_name='assigned_tasks',
         blank=True,
     )
+    completed_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='completed_tasks_marked',
+        blank=True,
+        help_text="Users who have marked this task as done."
+    )
     due_date = models.DateField(null=True, blank=True)
     # Enhanced fields for agile task management
     estimated_hours = models.DecimalField(

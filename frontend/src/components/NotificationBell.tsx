@@ -25,8 +25,9 @@ export function NotificationBell() {
   const loadNotifications = async () => {
     try {
       const res = await notificationsApi.list();
-      setNotifications(res.data);
-      const unread = res.data.filter((n: Notification) => !n.is_read).length;
+      const data = res.data.results || res.data; // Handle both paginated and non-paginated responses
+      setNotifications(data);
+      const unread = data.filter((n: Notification) => !n.is_read).length;
       setUnreadCount(unread);
     } catch (error) {
       console.error('Failed to load notifications', error);

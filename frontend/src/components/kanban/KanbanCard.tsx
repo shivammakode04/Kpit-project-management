@@ -1,7 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion } from 'framer-motion';
-import { Flame, AlertCircle, Zap, Calendar, MessageSquare, Paperclip, GripVertical } from 'lucide-react';
+import { Flame, AlertCircle, Zap, Calendar, MessageSquare, Paperclip, GripVertical, Check } from 'lucide-react';
 import { cn, formatDate, isOverdue, isDueToday } from '@/lib/utils';
 import Avatar from '@/components/common/Avatar';
 import type { Task } from '@/types';
@@ -87,19 +86,29 @@ export function KanbanCard({ task, isUpdating }: KanbanCardProps) {
         <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-surface-100 dark:border-surface-700/50">
           {/* Assignees */}
           <div className="flex -space-x-1.5">
-            {assignees.slice(0, 3).map((user) => (
+            {assignees.slice(0, 3).map((user) => {
+              const hasCompleted = task.completed_by?.includes(user.id);
+              return (
               <div
                 key={user.id}
-                title={user.full_name || user.username}
-                className="ring-2 ring-white dark:ring-surface-800 rounded-full"
+                title={`${user.full_name || user.username} ${hasCompleted ? '(Done)' : ''}`}
+                className={cn(
+                  "relative ring-2 rounded-full",
+                  hasCompleted ? "ring-success" : "ring-white dark:ring-surface-800"
+                )}
               >
                 <Avatar
                   name={user.full_name || user.username}
                   src={user.avatar_url || undefined}
                   size="xs"
                 />
+                {hasCompleted && (
+                  <div className="absolute -bottom-1 -right-1 bg-success text-white rounded-full p-[1px] ring-1 ring-white dark:ring-surface-800">
+                    <Check className="w-1.5 h-1.5" />
+                  </div>
+                )}
               </div>
-            ))}
+            )})}
             {assignees.length > 3 && (
               <div className="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-[9px] font-bold ring-2 ring-white dark:ring-surface-800">
                 +{assignees.length - 3}

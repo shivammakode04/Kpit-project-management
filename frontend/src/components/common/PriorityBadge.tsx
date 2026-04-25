@@ -17,6 +17,10 @@ const config: Record<Priority, { label: string; className: string }> = {
   },
   high: {
     label: 'High',
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  },
+  critical: {
+    label: 'Critical',
     className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   },
 };

@@ -32,7 +32,7 @@ export const tasksApi = {
   updateStatus: (id: number, status: string) =>
     api.patch<Task>(`/tasks/${id}/status/`, { status }),
 
-  assign: (id: number, assignedTo: number | null) =>
+  assign: (id: number, assignedTo: number[]) =>
     api.post<Task>(`/tasks/${id}/assign/`, { assigned_to: assignedTo }),
 
   getComments: (taskId: number) =>

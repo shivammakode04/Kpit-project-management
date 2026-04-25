@@ -67,9 +67,10 @@ export function NotificationDebug() {
     try {
       const response = await notificationsApi.list();
       console.log('API Response:', response.data);
+      const data = response.data.results || response.data;
       toast({
         title: 'API Test',
-        description: `API returned ${response.data.length} notifications`,
+        description: `API returned ${data.length} notifications`,
       });
     } catch (error) {
       console.error('API Error:', error);

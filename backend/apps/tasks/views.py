@@ -71,7 +71,14 @@ class TaskListCreateView(generics.ListCreateAPIView):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        # Pop assigned_to from validated_data to handle ManyToMany
+        assigned_to_ids = serializer.validated_data.pop('assigned_to', [])
+        
         task = serializer.save(story=story, created_by=request.user)
+        
+        if assigned_to_ids:
+            task.assigned_to.set(assigned_to_ids)
 
         log_activity(
             request.user.id, story.project_id,
@@ -145,8 +152,27 @@ class TaskStatusView(APIView):
 
         serializer = TaskStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        new_status = serializer.validated_data['status']
         old_status = task.status
-        task.status = serializer.validated_data['status']
+
+        assigned_users = list(task.assigned_to.all())
+        is_assigned = request.user in assigned_users
+
+        if new_status == Task.Status.DONE and is_assigned:
+            task.completed_by.add(request.user)
+            
+            # Check if all assigned users have completed it
+            completed_users = set(task.completed_by.all())
+            if set(assigned_users).issubset(completed_users) or not assigned_users:
+                task.status = new_status
+            else:
+                # Force to in progress if waiting on others
+                task.status = Task.Status.IN_PROGRESS
+        else:
+            if is_assigned and request.user in task.completed_by.all():
+                task.completed_by.remove(request.user)
+            task.status = new_status
+
         task.save(update_fields=['status'])
 
         log_activity(

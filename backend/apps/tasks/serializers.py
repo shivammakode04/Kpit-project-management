@@ -27,7 +27,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'id', 'story', 'story_title', 'project_id',
             'title', 'description', 'status', 'priority',
             'assigned_to', 'assigned_to_names', 'assigned_to_details',
-            'due_date', 'created_by', 'created_by_name',
+            'completed_by', 'due_date', 'created_by', 'created_by_name',
             'estimated_hours', 'actual_hours', 'task_type',
             'labels', 'is_blocked',
             'comment_count', 'attachment_count',

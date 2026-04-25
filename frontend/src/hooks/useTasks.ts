@@ -60,15 +60,14 @@ export function useCreateTask(storyId: number) {
       title: string;
       description?: string;
       priority?: string;
-      assigned_to?: number | null;
+      assigned_to?: number[];
       due_date?: string | null;
     }) => {
-      // Convert assigned_to to array format for backend
       const payload = {
         title: data.title,
         description: data.description,
         priority: data.priority,
-        assigned_to: data.assigned_to ? [data.assigned_to] : [],
+        assigned_to: data.assigned_to || [],
         due_date: data.due_date
       };
       return tasksApi.create(storyId, payload).then((r) => r.data);
